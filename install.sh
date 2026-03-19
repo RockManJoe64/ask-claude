@@ -11,7 +11,7 @@ CONFIG_FILE="$CONFIG_DIR/config"
 info()  { printf '\033[0;34m[ask-claude]\033[0m %s\n' "$1"; }
 ok()    { printf '\033[0;32m[ask-claude]\033[0m %s\n' "$1"; }
 err()   { printf '\033[0;31m[ask-claude]\033[0m %s\n' "$1" >&2; exit 1; }
-prompt(){ printf '%s' "$1"; read -r REPLY; echo "$REPLY"; }
+prompt(){ printf '%s' "$1"; read -r REPLY < /dev/tty; echo "$REPLY"; }
 
 # --- summary ---
 echo ""
@@ -26,7 +26,7 @@ echo "  5. Symlink ask-claude to $BIN_DIR/ask-claude"
 echo "  6. Add 'source $CONFIG_FILE' to your shell rc file"
 echo ""
 printf 'Continue? [y/N] '
-read -r CONFIRM
+read -r CONFIRM < /dev/tty
 case "$CONFIRM" in
   y|Y|yes|Yes) ;;
   *) echo "Aborted."; exit 0 ;;
@@ -55,18 +55,18 @@ echo ""
 info "Configuration"
 
 printf 'Anthropic API key (required): '
-read -r API_KEY
+read -r API_KEY < /dev/tty
 [ -z "$API_KEY" ] && err "API key is required."
 
 printf 'Model [claude-sonnet-4-6]: '
-read -r MODEL
+read -r MODEL < /dev/tty
 MODEL="${MODEL:-claude-sonnet-4-6}"
 
 printf 'System prompt (optional, press Enter to skip): '
-read -r SYSTEM
+read -r SYSTEM < /dev/tty
 
 printf 'Output mode — plain/stream/stream+markdown [stream+markdown]: '
-read -r OUTPUT
+read -r OUTPUT < /dev/tty
 OUTPUT="${OUTPUT:-stream+markdown}"
 
 # --- write config ---
