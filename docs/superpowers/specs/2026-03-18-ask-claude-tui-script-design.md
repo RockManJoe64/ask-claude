@@ -108,7 +108,7 @@ Priority order (highest wins):
 
 - Maintains full conversation history across turns (all prior messages sent with each API call, as the Anthropic API is stateless)
 - Displays a `You: ` prompt indicator
-- Exits cleanly on: `exit`, `quit`, Ctrl+C, Ctrl+D
+- Exits cleanly on: `/exit`, `/quit`, Ctrl+C, Ctrl+D
 
 ### 3. Installer (`install.sh`)
 
@@ -168,7 +168,7 @@ ask-claude.py
               ▼
          append assistant response to history[]
               │
-              └─► repeat until exit/quit/Ctrl+C/Ctrl+D
+              └─► repeat until /exit//quit/Ctrl+C/Ctrl+D
 ```
 
 ---
