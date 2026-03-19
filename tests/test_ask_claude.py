@@ -2,6 +2,7 @@ import os
 import pytest
 import importlib.util
 import sys
+from unittest.mock import MagicMock, patch
 
 
 def load_module():
@@ -94,3 +95,39 @@ def test_resolve_output_mode_env_fallback(mod):
 
 def test_resolve_output_mode_default(mod):
     assert mod.resolve_output_mode(None, None) == "stream+markdown"
+
+
+def make_stream_events(texts):
+    """Build a list of mock Anthropic streaming text delta events."""
+    events = []
+    for text in texts:
+        event = MagicMock()
+        event.type = "content_block_delta"
+        event.delta = MagicMock()
+        event.delta.type = "text_delta"
+        event.delta.text = text
+        events.append(event)
+    return events
+
+
+def test_render_plain_returns_full_text(mod, capsys):
+    events = make_stream_events(["Hello", ", ", "world"])
+    result = mod.render_plain(iter(events))
+    assert result == "Hello, world"
+    captured = capsys.readouterr()
+    assert "Hello, world" in captured.out
+
+
+def test_render_stream_prints_tokens(mod, capsys):
+    events = make_stream_events(["Hi", " there"])
+    mod.render_stream(iter(events))
+    captured = capsys.readouterr()
+    assert "Hi" in captured.out
+    assert "there" in captured.out
+
+
+def test_render_stream_markdown_returns_full_text(mod):
+    events = make_stream_events(["**bold**"])
+    with patch("rich.console.Console.print"):
+        result = mod.render_stream_markdown(iter(events))
+    assert result == "**bold**"
