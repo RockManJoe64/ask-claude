@@ -44,10 +44,12 @@ info "Prerequisites OK."
 # --- clone or pull ---
 if [ -d "$INSTALL_DIR/.git" ]; then
   info "Existing install found. Pulling latest changes..."
-  git -C "$INSTALL_DIR" pull --ff-only
+  git -C "$INSTALL_DIR" fetch origin
+  git -C "$INSTALL_DIR" checkout main
+  git -C "$INSTALL_DIR" pull --ff-only origin main
 else
   info "Cloning repository..."
-  git clone "$REPO_URL" "$INSTALL_DIR"
+  git clone --branch main "$REPO_URL" "$INSTALL_DIR"
 fi
 
 # --- config prompts ---
