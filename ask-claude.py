@@ -10,9 +10,6 @@ import os
 import sys
 from typing import Iterator, Optional
 
-from rich.console import Console
-from rich.markdown import Markdown
-
 
 VALID_MODES = ("plain", "stream", "stream+markdown")
 
@@ -87,6 +84,9 @@ def render_stream(stream: Iterator) -> str:
 
 def render_stream_markdown(stream: Iterator) -> str:
     """Stream tokens, then re-render full response with rich markdown."""
+    from rich.console import Console
+    from rich.markdown import Markdown
+
     parts = []
     for token in _extract_text_events(stream):
         print(token, end="", flush=True)

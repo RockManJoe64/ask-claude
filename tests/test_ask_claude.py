@@ -126,8 +126,30 @@ def test_render_stream_prints_tokens(mod, capsys):
     assert "there" in captured.out
 
 
-def test_render_stream_markdown_returns_full_text(mod):
+def test_render_stream_markdown_returns_full_text(mod, monkeypatch):
     events = make_stream_events(["**bold**"])
-    with patch("rich.console.Console.print"):
+    mock_print = MagicMock()
+
+    # Mock Console locally since it's lazily imported
+    import sys
+    mock_console_module = MagicMock()
+    mock_console_class = MagicMock()
+    mock_console_class.return_value.print = mock_print
+    mock_console_module.Console = mock_console_class
+
+    mock_markdown = MagicMock()
+
+    # Pre-emptively mock rich in sys.modules before the function is called
+    sys.modules["rich"] = MagicMock()
+    sys.modules["rich.console"] = mock_console_module
+    sys.modules["rich.markdown"] = MagicMock()
+    sys.modules["rich.markdown"].Markdown = mock_markdown
+
+    try:
         result = mod.render_stream_markdown(iter(events))
-    assert result == "**bold**"
+        assert result == "**bold**"
+    finally:
+        # Clean up
+        sys.modules.pop("rich", None)
+        sys.modules.pop("rich.console", None)
+        sys.modules.pop("rich.markdown", None)
