@@ -98,9 +98,13 @@ def render_stream_markdown(stream: Iterator) -> str:
     return full_text
 
 
+def _handle_api_error(e: Exception) -> None:
+    print(f"\nError: {e}", file=sys.stderr)
+    sys.exit(1)
+
+
 def run_single_shot(prompt: str, config: dict, output_mode: str) -> None:
     import anthropic
-
     client = anthropic.Anthropic(api_key=config["api_key"])
 
     stream_kwargs = dict(
@@ -111,13 +115,18 @@ def run_single_shot(prompt: str, config: dict, output_mode: str) -> None:
     if config["system"]:
         stream_kwargs["system"] = config["system"]
 
-    with client.messages.stream(**stream_kwargs) as stream:
-        if output_mode == "plain":
-            render_plain(stream)
-        elif output_mode == "stream":
-            render_stream(stream)
-        else:
-            render_stream_markdown(stream)
+    try:
+        with client.messages.stream(**stream_kwargs) as stream:
+            if output_mode == "plain":
+                render_plain(stream)
+            elif output_mode == "stream":
+                render_stream(stream)
+            else:
+                render_stream_markdown(stream)
+    except anthropic.AuthenticationError as e:
+        _handle_api_error(e)
+    except anthropic.APIStatusError as e:
+        _handle_api_error(e)
 
 
 def run_repl(config: dict, output_mode: str) -> None:
@@ -139,12 +148,11 @@ def run_repl(config: dict, output_mode: str) -> None:
         if not user_input:
             continue
 
-        # Lazy import anthropic only when needed for API calls
+        history.append({"role": "user", "content": user_input})
+
         import anthropic
         if 'client' not in locals():
             client = anthropic.Anthropic(api_key=config["api_key"])
-
-        history.append({"role": "user", "content": user_input})
 
         stream_kwargs = dict(
             model=config["model"],
@@ -154,19 +162,31 @@ def run_repl(config: dict, output_mode: str) -> None:
         if config["system"]:
             stream_kwargs["system"] = config["system"]
 
-        with client.messages.stream(**stream_kwargs) as stream:
-            if output_mode == "plain":
-                response_text = render_plain(stream)
-            elif output_mode == "stream":
-                response_text = render_stream(stream)
-            else:
-                response_text = render_stream_markdown(stream)
+        try:
+            with client.messages.stream(**stream_kwargs) as stream:
+                if output_mode == "plain":
+                    response_text = render_plain(stream)
+                elif output_mode == "stream":
+                    response_text = render_stream(stream)
+                else:
+                    response_text = render_stream_markdown(stream)
+        except anthropic.AuthenticationError as e:
+            _handle_api_error(e)
+        except anthropic.APIStatusError as e:
+            _handle_api_error(e)
 
         history.append({"role": "assistant", "content": response_text})
 
 
 def main() -> None:
-    pass
+    config = load_config()
+    args = parse_args()
+    output_mode = resolve_output_mode(args.mode, config["output"])
+
+    if args.prompt:
+        run_single_shot(args.prompt, config, output_mode)
+    else:
+        run_repl(config, output_mode)
 
 
 if __name__ == "__main__":

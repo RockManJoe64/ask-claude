@@ -281,3 +281,63 @@ def test_repl_sends_history(mod, monkeypatch):
     mock_client.messages.stream.assert_called_once()
     call_kwargs = mock_client.messages.stream.call_args.kwargs
     assert call_kwargs["messages"][0] == {"role": "user", "content": "hello"}
+
+
+def test_main_single_shot_dispatches(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
+    monkeypatch.setattr("sys.argv", ["ask-claude", "hello"])
+
+    called_with = {}
+    def fake_single_shot(prompt, config, output_mode):
+        called_with["prompt"] = prompt
+        called_with["output_mode"] = output_mode
+
+    monkeypatch.setattr(mod, "run_single_shot", fake_single_shot)
+    mod.main()
+    assert called_with["prompt"] == "hello"
+
+
+def test_main_repl_dispatches(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
+    monkeypatch.setattr("sys.argv", ["ask-claude"])
+
+    called = {}
+    def fake_repl(config, output_mode):
+        called["yes"] = True
+
+    monkeypatch.setattr(mod, "run_repl", fake_repl)
+    mod.main()
+    assert called.get("yes")
+
+
+def test_api_error_exits_cleanly(mod, monkeypatch):
+    import sys as _sys
+
+    mock_auth_error_class = type("AuthenticationError", (Exception,), {})
+    mock_api_status_error_class = type("APIStatusError", (Exception,), {})
+
+    mock_stream_cm = MagicMock()
+    mock_stream_cm.__enter__ = MagicMock(side_effect=mock_auth_error_class("Invalid API key"))
+    mock_stream_cm.__exit__ = MagicMock(return_value=False)
+
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = mock_stream_cm
+
+    mock_anthropic = MagicMock()
+    mock_anthropic.Anthropic.return_value = mock_client
+    mock_anthropic.AuthenticationError = mock_auth_error_class
+    mock_anthropic.APIStatusError = mock_api_status_error_class
+
+    _sys.modules["anthropic"] = mock_anthropic
+
+    config = {
+        "api_key": "bad-key", "model": "claude-sonnet-4-6",
+        "system": None, "max_tokens": 8096, "output": "plain",
+    }
+
+    try:
+        with pytest.raises(SystemExit) as exc:
+            mod.run_single_shot("hello", config, output_mode="plain")
+        assert exc.value.code != 0
+    finally:
+        _sys.modules.pop("anthropic", None)
