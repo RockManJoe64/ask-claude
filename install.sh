@@ -42,6 +42,7 @@ done
 info "Prerequisites OK."
 
 # --- clone or pull ---
+mkdir -p "$INSTALL_DIR"
 if [ -d "$INSTALL_DIR/.git" ]; then
   info "Existing install found. Pulling latest changes..."
   git -C "$INSTALL_DIR" fetch origin
