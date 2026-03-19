@@ -153,3 +153,53 @@ def test_render_stream_markdown_returns_full_text(mod, monkeypatch):
         sys.modules.pop("rich", None)
         sys.modules.pop("rich.console", None)
         sys.modules.pop("rich.markdown", None)
+
+
+def test_single_shot_calls_api_and_renders(mod, monkeypatch):
+    mock_stream = MagicMock()
+    mock_stream.__iter__ = MagicMock(return_value=iter(make_stream_events(["Hi"])))
+    mock_stream.__enter__ = MagicMock(return_value=mock_stream)
+    mock_stream.__exit__ = MagicMock(return_value=False)
+
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = mock_stream
+
+    config = {
+        "api_key": "key",
+        "model": "claude-sonnet-4-6",
+        "system": None,
+        "max_tokens": 8096,
+        "output": "plain",
+    }
+
+    with patch("anthropic.Anthropic", return_value=mock_client):
+        mod.run_single_shot("hello", config, output_mode="plain")
+
+    mock_client.messages.stream.assert_called_once()
+    call_kwargs = mock_client.messages.stream.call_args.kwargs
+    assert call_kwargs["messages"][0]["content"] == "hello"
+    assert call_kwargs["model"] == "claude-sonnet-4-6"
+
+
+def test_single_shot_passes_system_prompt(mod, monkeypatch):
+    mock_stream = MagicMock()
+    mock_stream.__iter__ = MagicMock(return_value=iter([]))
+    mock_stream.__enter__ = MagicMock(return_value=mock_stream)
+    mock_stream.__exit__ = MagicMock(return_value=False)
+
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = mock_stream
+
+    config = {
+        "api_key": "key",
+        "model": "claude-sonnet-4-6",
+        "system": "Be brief.",
+        "max_tokens": 8096,
+        "output": "plain",
+    }
+
+    with patch("anthropic.Anthropic", return_value=mock_client):
+        mod.run_single_shot("hello", config, output_mode="plain")
+
+    call_kwargs = mock_client.messages.stream.call_args.kwargs
+    assert call_kwargs["system"] == "Be brief."

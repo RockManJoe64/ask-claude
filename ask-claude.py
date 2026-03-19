@@ -98,6 +98,28 @@ def render_stream_markdown(stream: Iterator) -> str:
     return full_text
 
 
+def run_single_shot(prompt: str, config: dict, output_mode: str) -> None:
+    import anthropic
+
+    client = anthropic.Anthropic(api_key=config["api_key"])
+
+    stream_kwargs = dict(
+        model=config["model"],
+        max_tokens=config["max_tokens"],
+        messages=[{"role": "user", "content": prompt}],
+    )
+    if config["system"]:
+        stream_kwargs["system"] = config["system"]
+
+    with client.messages.stream(**stream_kwargs) as stream:
+        if output_mode == "plain":
+            render_plain(stream)
+        elif output_mode == "stream":
+            render_stream(stream)
+        else:
+            render_stream_markdown(stream)
+
+
 def main() -> None:
     pass
 
