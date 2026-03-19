@@ -172,13 +172,22 @@ def test_single_shot_calls_api_and_renders(mod, monkeypatch):
         "output": "plain",
     }
 
-    with patch("anthropic.Anthropic", return_value=mock_client):
-        mod.run_single_shot("hello", config, output_mode="plain")
+    # Mock anthropic module locally since it's lazily imported
+    mock_anthropic = MagicMock()
+    mock_anthropic.Anthropic.return_value = mock_client
 
-    mock_client.messages.stream.assert_called_once()
-    call_kwargs = mock_client.messages.stream.call_args.kwargs
-    assert call_kwargs["messages"][0]["content"] == "hello"
-    assert call_kwargs["model"] == "claude-sonnet-4-6"
+    # Pre-emptively mock anthropic in sys.modules before the function is called
+    sys.modules["anthropic"] = mock_anthropic
+
+    try:
+        mod.run_single_shot("hello", config, output_mode="plain")
+        mock_client.messages.stream.assert_called_once()
+        call_kwargs = mock_client.messages.stream.call_args.kwargs
+        assert call_kwargs["messages"][0]["content"] == "hello"
+        assert call_kwargs["model"] == "claude-sonnet-4-6"
+    finally:
+        # Clean up
+        sys.modules.pop("anthropic", None)
 
 
 def test_single_shot_passes_system_prompt(mod, monkeypatch):
@@ -198,8 +207,17 @@ def test_single_shot_passes_system_prompt(mod, monkeypatch):
         "output": "plain",
     }
 
-    with patch("anthropic.Anthropic", return_value=mock_client):
-        mod.run_single_shot("hello", config, output_mode="plain")
+    # Mock anthropic module locally since it's lazily imported
+    mock_anthropic = MagicMock()
+    mock_anthropic.Anthropic.return_value = mock_client
 
-    call_kwargs = mock_client.messages.stream.call_args.kwargs
-    assert call_kwargs["system"] == "Be brief."
+    # Pre-emptively mock anthropic in sys.modules before the function is called
+    sys.modules["anthropic"] = mock_anthropic
+
+    try:
+        mod.run_single_shot("hello", config, output_mode="plain")
+        call_kwargs = mock_client.messages.stream.call_args.kwargs
+        assert call_kwargs["system"] == "Be brief."
+    finally:
+        # Clean up
+        sys.modules.pop("anthropic", None)
