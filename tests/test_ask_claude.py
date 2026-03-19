@@ -221,3 +221,63 @@ def test_single_shot_passes_system_prompt(mod, monkeypatch):
     finally:
         # Clean up
         sys.modules.pop("anthropic", None)
+
+
+def test_repl_exits_on_slash_exit(mod, monkeypatch):
+    inputs = iter(["/exit"])
+    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+    config = {
+        "api_key": "key", "model": "claude-sonnet-4-6",
+        "system": None, "max_tokens": 8096, "output": "plain",
+    }
+    # Should return without error
+    mod.run_repl(config, output_mode="plain")
+
+
+def test_repl_exits_on_slash_quit(mod, monkeypatch):
+    inputs = iter(["/quit"])
+    monkeypatch.setattr("builtins.input", lambda _: next(inputs))
+
+    config = {
+        "api_key": "key", "model": "claude-sonnet-4-6",
+        "system": None, "max_tokens": 8096, "output": "plain",
+    }
+    mod.run_repl(config, output_mode="plain")
+
+
+def test_repl_sends_history(mod, monkeypatch):
+    mock_stream = MagicMock()
+    mock_stream.__iter__ = MagicMock(return_value=iter(make_stream_events(["Hi"])))
+    mock_stream.__enter__ = MagicMock(return_value=mock_stream)
+    mock_stream.__exit__ = MagicMock(return_value=False)
+
+    mock_client = MagicMock()
+    mock_client.messages.stream.return_value = mock_stream
+
+    # First turn sends a message, second turn exits
+    call_count = 0
+    def fake_input(_):
+        nonlocal call_count
+        call_count += 1
+        return "hello" if call_count == 1 else "/exit"
+
+    monkeypatch.setattr("builtins.input", fake_input)
+
+    config = {
+        "api_key": "key", "model": "claude-sonnet-4-6",
+        "system": None, "max_tokens": 8096, "output": "plain",
+    }
+
+    mock_anthropic = MagicMock()
+    mock_anthropic.Anthropic.return_value = mock_client
+    import sys
+    sys.modules["anthropic"] = mock_anthropic
+    try:
+        mod.run_repl(config, output_mode="plain")
+    finally:
+        sys.modules.pop("anthropic", None)
+
+    mock_client.messages.stream.assert_called_once()
+    call_kwargs = mock_client.messages.stream.call_args.kwargs
+    assert call_kwargs["messages"][0] == {"role": "user", "content": "hello"}

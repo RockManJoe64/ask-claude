@@ -120,6 +120,51 @@ def run_single_shot(prompt: str, config: dict, output_mode: str) -> None:
             render_stream_markdown(stream)
 
 
+def run_repl(config: dict, output_mode: str) -> None:
+    history: list[dict] = []
+
+    print("Claude REPL — type /exit or /quit to exit.\n")
+
+    while True:
+        try:
+            user_input = input("You: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nGoodbye.")
+            break
+
+        if user_input in ("/exit", "/quit"):
+            print("Goodbye.")
+            break
+
+        if not user_input:
+            continue
+
+        # Lazy import anthropic only when needed for API calls
+        import anthropic
+        if 'client' not in locals():
+            client = anthropic.Anthropic(api_key=config["api_key"])
+
+        history.append({"role": "user", "content": user_input})
+
+        stream_kwargs = dict(
+            model=config["model"],
+            max_tokens=config["max_tokens"],
+            messages=history,
+        )
+        if config["system"]:
+            stream_kwargs["system"] = config["system"]
+
+        with client.messages.stream(**stream_kwargs) as stream:
+            if output_mode == "plain":
+                response_text = render_plain(stream)
+            elif output_mode == "stream":
+                response_text = render_stream(stream)
+            else:
+                response_text = render_stream_markdown(stream)
+
+        history.append({"role": "assistant", "content": response_text})
+
+
 def main() -> None:
     pass
 
