@@ -123,9 +123,7 @@ def run_single_shot(prompt: str, config: dict, output_mode: str) -> None:
                 render_stream(stream)
             else:
                 render_stream_markdown(stream)
-    except anthropic.AuthenticationError as e:
-        _handle_api_error(e)
-    except anthropic.APIStatusError as e:
+    except (anthropic.AuthenticationError, anthropic.APIStatusError) as e:
         _handle_api_error(e)
 
 
@@ -133,6 +131,8 @@ def run_repl(config: dict, output_mode: str) -> None:
     history: list[dict] = []
 
     print("Claude REPL — type /exit or /quit to exit.\n")
+
+    client = None
 
     while True:
         try:
@@ -150,8 +150,8 @@ def run_repl(config: dict, output_mode: str) -> None:
 
         history.append({"role": "user", "content": user_input})
 
-        import anthropic
-        if 'client' not in locals():
+        if client is None:
+            import anthropic
             client = anthropic.Anthropic(api_key=config["api_key"])
 
         stream_kwargs = dict(
@@ -162,6 +162,7 @@ def run_repl(config: dict, output_mode: str) -> None:
         if config["system"]:
             stream_kwargs["system"] = config["system"]
 
+        response_text = ""
         try:
             with client.messages.stream(**stream_kwargs) as stream:
                 if output_mode == "plain":
@@ -170,9 +171,7 @@ def run_repl(config: dict, output_mode: str) -> None:
                     response_text = render_stream(stream)
                 else:
                     response_text = render_stream_markdown(stream)
-        except anthropic.AuthenticationError as e:
-            _handle_api_error(e)
-        except anthropic.APIStatusError as e:
+        except (anthropic.AuthenticationError, anthropic.APIStatusError) as e:
             _handle_api_error(e)
 
         history.append({"role": "assistant", "content": response_text})
