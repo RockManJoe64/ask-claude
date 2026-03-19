@@ -22,7 +22,7 @@ echo "  1. Check prerequisites (uv, curl, git)"
 echo "  2. Clone/update the repo to $INSTALL_DIR"
 echo "  3. Prompt for your Anthropic API key and preferences"
 echo "  4. Write $CONFIG_FILE"
-echo "  5. Symlink ask-claude to $BIN_DIR/ask-claude"
+echo "  5. Add $INSTALL_DIR to PATH"
 echo "  6. Add 'source $CONFIG_FILE' to your shell rc file"
 echo ""
 printf 'Continue? [y/N] '
@@ -80,17 +80,16 @@ cat > "$CONFIG_FILE" <<EOF
 export ASK_CLAUDE_API_KEY="$API_KEY"
 export ASK_CLAUDE_MODEL="$MODEL"
 export ASK_CLAUDE_OUTPUT="$OUTPUT"
+export PATH="$INSTALL_DIR:\$PATH"
 EOF
 if [ -n "$SYSTEM" ]; then
   echo "export ASK_CLAUDE_SYSTEM=\"$SYSTEM\"" >> "$CONFIG_FILE"
 fi
 ok "Config written to $CONFIG_FILE"
 
-# --- symlink ---
-mkdir -p "$BIN_DIR"
+# --- make executable ---
 chmod +x "$INSTALL_DIR/ask-claude"
-ln -sf "$INSTALL_DIR/ask-claude" "$BIN_DIR/ask-claude"
-ok "Symlinked ask-claude to $BIN_DIR/ask-claude"
+ok "ask-claude is ready at $INSTALL_DIR/ask-claude"
 
 # --- shell rc patching ---
 SOURCE_LINE="source \"$CONFIG_FILE\""
