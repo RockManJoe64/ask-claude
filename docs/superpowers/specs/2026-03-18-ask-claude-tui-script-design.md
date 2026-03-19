@@ -102,7 +102,7 @@ Priority order (highest wins):
 |---|---|
 | `plain` | Buffer full response, print as plain text |
 | `stream` | Stream tokens to stdout as they arrive |
-| `stream+markdown` | Stream tokens, render final output with `rich` markdown (bold, code blocks, tables, etc.) |
+| `stream+markdown` | Stream tokens to stdout as they arrive, then re-render the complete response in-place using `rich` markdown (bold, code blocks, tables, etc.) |
 
 #### REPL Behavior
 
@@ -127,10 +127,12 @@ curl -sSf https://raw.githubusercontent.com/rockmanjoe64/ask-claude/main/install
    - `ASK_CLAUDE_MODEL` (optional, shows default)
    - `ASK_CLAUDE_SYSTEM` (optional)
    - `ASK_CLAUDE_OUTPUT` (optional, shows default)
+   - `ASK_CLAUDE_MAX_TOKENS` is intentionally omitted from installer prompts — it is an advanced setting best left at its default; users who need it can set it manually in `~/.config/ask-claude/config`
 5. Write `~/.config/ask-claude/config` with the collected exports
 6. Symlink `~/.local/share/ask-claude/ask-claude` → `~/.local/bin/ask-claude`
-7. Detect the user's shell (bash → `~/.bashrc`, zsh → `~/.zshrc`, fish → `~/.config/fish/config.fish`) and append a single `source ~/.config/ask-claude/config` line
-8. Print a success message with usage examples
+7. Detect the user's shell (bash → `~/.bashrc`, zsh → `~/.zshrc`, fish → `~/.config/fish/config.fish`) and append a single `source ~/.config/ask-claude/config` line — skip if the line already exists (idempotent)
+8. If `~/.local/share/ask-claude/` already exists, pull the latest changes instead of re-cloning
+9. Print a success message with usage examples
 
 ---
 
