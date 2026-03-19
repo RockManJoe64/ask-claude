@@ -58,7 +58,7 @@ info "Configuration"
 
 printf 'Anthropic API key (required): '
 read -rs API_KEY < /dev/tty
-echo "(key received)"
+echo "sk-***"
 [ -z "$API_KEY" ] && err "API key is required."
 
 printf 'Model [claude-sonnet-4-6]: '
