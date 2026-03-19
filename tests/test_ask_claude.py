@@ -53,3 +53,44 @@ def test_load_config_custom_values(mod, monkeypatch):
     assert config["system"] == "Be concise."
     assert config["max_tokens"] == 1024
     assert config["output"] == "plain"
+
+
+def test_parse_args_single_shot(mod):
+    args = mod.parse_args(["hello world"])
+    assert args.prompt == "hello world"
+    assert args.mode is None
+
+
+def test_parse_args_repl_no_args(mod):
+    args = mod.parse_args([])
+    assert args.prompt is None
+    assert args.mode is None
+
+
+def test_parse_args_mode_flag_short(mod):
+    args = mod.parse_args(["-m", "plain", "hello"])
+    assert args.mode == "plain"
+    assert args.prompt == "hello"
+
+
+def test_parse_args_mode_flag_long(mod):
+    args = mod.parse_args(["--mode", "stream"])
+    assert args.mode == "stream"
+    assert args.prompt is None
+
+
+def test_parse_args_invalid_mode_exits(mod):
+    with pytest.raises(SystemExit):
+        mod.parse_args(["--mode", "invalid"])
+
+
+def test_resolve_output_mode_cli_wins(mod):
+    assert mod.resolve_output_mode("plain", "stream+markdown") == "plain"
+
+
+def test_resolve_output_mode_env_fallback(mod):
+    assert mod.resolve_output_mode(None, "stream") == "stream"
+
+
+def test_resolve_output_mode_default(mod):
+    assert mod.resolve_output_mode(None, None) == "stream+markdown"
