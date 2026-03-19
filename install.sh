@@ -88,8 +88,12 @@ if [ -n "$SYSTEM" ]; then
 fi
 ok "Config written to $CONFIG_FILE"
 
-# --- make executable ---
+# --- make executable + remove stale bin entry ---
 chmod +x "$INSTALL_DIR/ask-claude"
+if [ -f "$BIN_DIR/ask-claude" ] || [ -L "$BIN_DIR/ask-claude" ]; then
+  rm -f "$BIN_DIR/ask-claude"
+  info "Removed stale $BIN_DIR/ask-claude"
+fi
 ok "ask-claude is ready at $INSTALL_DIR/ask-claude"
 
 # --- shell rc patching ---
