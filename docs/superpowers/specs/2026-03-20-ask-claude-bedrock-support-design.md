@@ -73,7 +73,7 @@ Provider [direct/bedrock] (direct):
 
 **If `bedrock` selected:** Skip `ASK_CLAUDE_API_KEY` prompt; instead prompt for:
 - `ASK_CLAUDE_BEDROCK_API_KEY` (masked, same `read -rs` + `echo "sk-***"` pattern)
-- `ASK_CLAUDE_AWS_REGION` (optional, shows default `us-west-2`)
+- `ASK_CLAUDE_AWS_REGION` (optional, shows default `us-west-2`). If the user leaves this blank, write `export ASK_CLAUDE_AWS_REGION="us-west-2"` to the config file explicitly — same pattern as other optional fields with defaults.
 
 Both paths write `ASK_CLAUDE_PROVIDER` to the config file.
 
