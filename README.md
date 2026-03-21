@@ -55,7 +55,7 @@ Add the following to `~/.config/ask-claude/config`:
 export ASK_CLAUDE_PROVIDER="bedrock"
 export ASK_CLAUDE_BEDROCK_API_KEY="your-bedrock-api-key"
 export ASK_CLAUDE_AWS_REGION="us-west-2"
-export ASK_CLAUDE_MODEL="anthropic.claude-sonnet-4-6"
+export ASK_CLAUDE_MODEL="us.anthropic.claude-sonnet-4-6"
 ```
 
 ### Bedrock-specific variables
@@ -71,7 +71,7 @@ Bedrock uses different model IDs from the direct API. The default when `ASK_CLAU
 
 | Model | Bedrock model ID |
 |---|---|
-| Claude Sonnet 4.6 | `anthropic.claude-sonnet-4-6` |
+| Claude Sonnet 4.6 | `us.anthropic.claude-sonnet-4-6` |
 | Claude Opus 4.6 | `global.anthropic.claude-opus-4-6-v1` |
 | Claude Haiku 4.5 | `anthropic.claude-haiku-4-5-20251001-v1:0` |
 

@@ -101,7 +101,7 @@ def test_load_config_bedrock_default_model(mod, monkeypatch):
     monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "key")
     monkeypatch.delenv("ASK_CLAUDE_MODEL", raising=False)
     config = mod.load_config()
-    assert config["model"] == "anthropic.claude-sonnet-4-6"
+    assert config["model"] == "us.anthropic.claude-sonnet-4-6"
 
 
 def test_load_config_region_ask_claude_aws_region_wins(mod, monkeypatch):

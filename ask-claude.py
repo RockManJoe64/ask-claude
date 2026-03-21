@@ -44,7 +44,7 @@ def load_config() -> dict:
             sys.exit(1)
 
     default_model = (
-        "claude-sonnet-4-6" if provider == "direct" else "anthropic.claude-sonnet-4-6"
+        "claude-sonnet-4-6" if provider == "direct" else "us.anthropic.claude-sonnet-4-6"
     )
     aws_region = (
         os.environ.get("ASK_CLAUDE_AWS_REGION")
