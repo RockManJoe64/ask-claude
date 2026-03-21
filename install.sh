@@ -146,7 +146,10 @@ fi
 echo ""
 ok "Installation complete!"
 echo ""
-echo "  Restart your shell or run:  source $CONFIG_FILE"
+printf '\033[0;33m  ACTION REQUIRED — activate ask-claude in this shell:\033[0m\n'
+printf '\033[0;33m  source %s\033[0m\n' "$CONFIG_FILE"
+echo ""
+echo "  (New shells will activate automatically via your rc file.)"
 echo ""
 echo "  Usage:"
 echo "    ask-claude \"explain closures\"    # single-shot"
