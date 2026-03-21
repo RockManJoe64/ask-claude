@@ -39,7 +39,7 @@ Add AWS Bedrock as an alternative provider to the existing direct Anthropic API.
 | Provider | Default model |
 |---|---|
 | `direct` | `claude-sonnet-4-6` |
-| `bedrock` | `anthropic.claude-sonnet-4-6` |
+| `bedrock` | `us.anthropic.claude-sonnet-4-6` |
 
 ---
 

@@ -67,7 +67,7 @@ export ASK_CLAUDE_MODEL="us.anthropic.claude-sonnet-4-6"
 
 ### Bedrock model IDs
 
-Bedrock uses different model IDs from the direct API. The default when `ASK_CLAUDE_PROVIDER=bedrock` is `anthropic.claude-sonnet-4-6`. Examples:
+Bedrock uses different model IDs from the direct API. The default when `ASK_CLAUDE_PROVIDER=bedrock` is `us.anthropic.claude-sonnet-4-6`. Examples:
 
 | Model | Bedrock model ID |
 |---|---|

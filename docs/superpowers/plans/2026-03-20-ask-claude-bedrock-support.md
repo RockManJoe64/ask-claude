@@ -35,7 +35,7 @@
 
 Model default is now provider-specific:
 - `direct` → `"claude-sonnet-4-6"`
-- `bedrock` → `"anthropic.claude-sonnet-4-6"`
+- `bedrock` → `"us.anthropic.claude-sonnet-4-6"`
 
 The returned config dict gains three new keys: `provider`, `bedrock_api_key`, `aws_region`.
 
@@ -91,7 +91,7 @@ def test_load_config_bedrock_default_model(mod, monkeypatch):
     monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "key")
     monkeypatch.delenv("ASK_CLAUDE_MODEL", raising=False)
     config = mod.load_config()
-    assert config["model"] == "anthropic.claude-sonnet-4-6"
+    assert config["model"] == "us.anthropic.claude-sonnet-4-6"
 
 
 def test_load_config_region_ask_claude_aws_region_wins(mod, monkeypatch):
@@ -474,7 +474,7 @@ else
   printf 'AWS region [us-west-2]: '
   read -r AWS_REGION < /dev/tty
   AWS_REGION="${AWS_REGION:-us-west-2}"
-  DEFAULT_MODEL="anthropic.claude-sonnet-4-6"
+  DEFAULT_MODEL="us.anthropic.claude-sonnet-4-6"
 fi
 
 printf "Model [$DEFAULT_MODEL]: "

@@ -78,7 +78,7 @@ else
   printf 'AWS region [us-west-2]: '
   read -r AWS_REGION < /dev/tty
   AWS_REGION="${AWS_REGION:-us-west-2}"
-  DEFAULT_MODEL="anthropic.claude-sonnet-4-6"
+  DEFAULT_MODEL="us.anthropic.claude-sonnet-4-6"
 fi
 
 printf "Model [$DEFAULT_MODEL]: "

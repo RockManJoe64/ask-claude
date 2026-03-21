@@ -173,7 +173,7 @@ def test_build_client_bedrock_creates_bedrock_client(mod, monkeypatch):
         "provider": "bedrock",
         "api_key": None,
         "bedrock_api_key": "bedrock-key-123",
-        "model": "anthropic.claude-sonnet-4-6",
+        "model": "us.anthropic.claude-sonnet-4-6",
         "system": None,
         "max_tokens": 8096,
         "output": "plain",
