@@ -20,7 +20,7 @@ echo "===================="
 echo "This script will:"
 echo "  1. Check prerequisites (uv, curl, git)"
 echo "  2. Clone/update the repo to $INSTALL_DIR"
-echo "  3. Prompt for your Anthropic API key and preferences"
+echo "  3. Prompt for provider (direct/bedrock) and credentials"
 echo "  4. Write $CONFIG_FILE"
 echo "  5. Add $INSTALL_DIR to PATH"
 echo "  6. Add 'source $CONFIG_FILE' to your shell rc file"
@@ -57,14 +57,33 @@ fi
 echo ""
 info "Configuration"
 
-printf 'Anthropic API key (required): '
-read -rs API_KEY < /dev/tty
-echo "sk-***"
-[ -z "$API_KEY" ] && err "API key is required."
+printf 'Provider [direct/bedrock] (direct): '
+read -r PROVIDER < /dev/tty
+PROVIDER="${PROVIDER:-direct}"
+if [ "$PROVIDER" != "direct" ] && [ "$PROVIDER" != "bedrock" ]; then
+  err "Provider must be 'direct' or 'bedrock'."
+fi
 
-printf 'Model [claude-sonnet-4-6]: '
+if [ "$PROVIDER" = "direct" ]; then
+  printf 'Anthropic API key (required): '
+  read -rs API_KEY < /dev/tty
+  echo "sk-***"
+  [ -z "$API_KEY" ] && err "API key is required."
+  DEFAULT_MODEL="claude-sonnet-4-6"
+else
+  printf 'Bedrock API key (required): '
+  read -rs BEDROCK_API_KEY < /dev/tty
+  echo "sk-***"
+  [ -z "$BEDROCK_API_KEY" ] && err "Bedrock API key is required."
+  printf 'AWS region [us-west-2]: '
+  read -r AWS_REGION < /dev/tty
+  AWS_REGION="${AWS_REGION:-us-west-2}"
+  DEFAULT_MODEL="anthropic.claude-sonnet-4-6"
+fi
+
+printf "Model [$DEFAULT_MODEL]: "
 read -r MODEL < /dev/tty
-MODEL="${MODEL:-claude-sonnet-4-6}"
+MODEL="${MODEL:-$DEFAULT_MODEL}"
 
 printf 'System prompt (optional, press Enter to skip): '
 read -r SYSTEM < /dev/tty
@@ -78,11 +97,17 @@ mkdir -p "$CONFIG_DIR"
 cat > "$CONFIG_FILE" <<EOF
 # ask-claude configuration
 # Edit this file to change defaults. Re-run install.sh to reconfigure.
-export ASK_CLAUDE_API_KEY="$API_KEY"
+export ASK_CLAUDE_PROVIDER="$PROVIDER"
 export ASK_CLAUDE_MODEL="$MODEL"
 export ASK_CLAUDE_OUTPUT="$OUTPUT"
 export PATH="$INSTALL_DIR:\$PATH"
 EOF
+if [ "$PROVIDER" = "direct" ]; then
+  echo "export ASK_CLAUDE_API_KEY=\"$API_KEY\"" >> "$CONFIG_FILE"
+else
+  echo "export ASK_CLAUDE_BEDROCK_API_KEY=\"$BEDROCK_API_KEY\"" >> "$CONFIG_FILE"
+  echo "export ASK_CLAUDE_AWS_REGION=\"$AWS_REGION\"" >> "$CONFIG_FILE"
+fi
 if [ -n "$SYSTEM" ]; then
   echo "export ASK_CLAUDE_SYSTEM=\"$SYSTEM\"" >> "$CONFIG_FILE"
 fi
