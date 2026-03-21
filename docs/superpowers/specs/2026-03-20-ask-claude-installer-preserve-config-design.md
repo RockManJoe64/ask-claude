@@ -121,8 +121,12 @@ PROVIDER="${PROVIDER:-$CURRENT_PROVIDER}"
 if [ -n "$ASK_CLAUDE_API_KEY" ]; then
   printf 'Anthropic API key (press Enter to keep existing): '
   read -rs API_KEY < /dev/tty
-  echo ""
-  API_KEY="${API_KEY:-$ASK_CLAUDE_API_KEY}"
+  if [ -n "$API_KEY" ]; then
+    echo "sk-***"  # new key entered — confirm receipt
+  else
+    echo ""        # kept existing — blank line to advance the prompt
+    API_KEY="$ASK_CLAUDE_API_KEY"
+  fi
 else
   printf 'Anthropic API key (required): '
   read -rs API_KEY < /dev/tty
@@ -136,8 +140,12 @@ fi
 if [ -n "$ASK_CLAUDE_BEDROCK_API_KEY" ]; then
   printf 'Bedrock API key (press Enter to keep existing): '
   read -rs BEDROCK_API_KEY < /dev/tty
-  echo ""
-  BEDROCK_API_KEY="${BEDROCK_API_KEY:-$ASK_CLAUDE_BEDROCK_API_KEY}"
+  if [ -n "$BEDROCK_API_KEY" ]; then
+    echo "sk-***"  # new key entered — confirm receipt
+  else
+    echo ""        # kept existing — blank line to advance the prompt
+    BEDROCK_API_KEY="$ASK_CLAUDE_BEDROCK_API_KEY"
+  fi
 else
   printf 'Bedrock API key (required): '
   read -rs BEDROCK_API_KEY < /dev/tty
@@ -147,6 +155,8 @@ fi
 ```
 
 ### 4. Update region, model, system prompt, and output mode prompts
+
+**Ordering note:** The model prompt must come after the provider/credentials block so that `$DEFAULT_MODEL` is already set to the correct provider-specific value before `$CURRENT_MODEL` is resolved.
 
 Use loaded env vars as defaults:
 
