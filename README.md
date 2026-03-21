@@ -1,5 +1,7 @@
 # ask-claude
 
+<img src="images/Ask-Claude-Mascot.png" width="256" height="256" alt="Ask Claude Mascot">
+
 Query Claude from your terminal — single-shot or interactive REPL.
 
 ## Install
