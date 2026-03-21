@@ -128,18 +128,18 @@ def render_stream(stream: Iterator) -> str:
 
 
 def render_stream_markdown(stream: Iterator) -> str:
-    """Stream tokens, then re-render full response with rich markdown."""
+    """Stream tokens with live-updating rich markdown rendering."""
     from rich.console import Console
+    from rich.live import Live
     from rich.markdown import Markdown
 
-    parts = []
-    for token in _extract_text_events(stream):
-        print(token, end="", flush=True)
-        parts.append(token)
-    full_text = "".join(parts)
-    print("\r", end="")  # return to start of line before re-render
     console = Console()
-    console.print(Markdown(full_text))
+    parts = []
+    with Live(console=console, refresh_per_second=10) as live:
+        for token in _extract_text_events(stream):
+            parts.append(token)
+            live.update(Markdown("".join(parts)))
+    full_text = "".join(parts)
     return full_text
 
 

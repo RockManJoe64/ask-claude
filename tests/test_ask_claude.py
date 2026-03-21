@@ -266,30 +266,31 @@ def test_render_stream_prints_tokens(mod, capsys):
 
 def test_render_stream_markdown_returns_full_text(mod, monkeypatch):
     events = make_stream_events(["**bold**"])
-    mock_print = MagicMock()
 
-    # Mock Console locally since it's lazily imported
     import sys
     mock_console_module = MagicMock()
-    mock_console_class = MagicMock()
-    mock_console_class.return_value.print = mock_print
-    mock_console_module.Console = mock_console_class
+    mock_live_module = MagicMock()
+    mock_markdown_module = MagicMock()
 
-    mock_markdown = MagicMock()
+    # Live context manager mock
+    mock_live_instance = MagicMock()
+    mock_live_instance.__enter__ = MagicMock(return_value=mock_live_instance)
+    mock_live_instance.__exit__ = MagicMock(return_value=False)
+    mock_live_module.Live.return_value = mock_live_instance
 
-    # Pre-emptively mock rich in sys.modules before the function is called
     sys.modules["rich"] = MagicMock()
     sys.modules["rich.console"] = mock_console_module
-    sys.modules["rich.markdown"] = MagicMock()
-    sys.modules["rich.markdown"].Markdown = mock_markdown
+    sys.modules["rich.live"] = mock_live_module
+    sys.modules["rich.markdown"] = mock_markdown_module
 
     try:
         result = mod.render_stream_markdown(iter(events))
         assert result == "**bold**"
+        mock_live_instance.update.assert_called_once()
     finally:
-        # Clean up
         sys.modules.pop("rich", None)
         sys.modules.pop("rich.console", None)
+        sys.modules.pop("rich.live", None)
         sys.modules.pop("rich.markdown", None)
 
 
