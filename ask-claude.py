@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["anthropic", "rich"]
+# dependencies = ["anthropic[bedrock]", "rich"]
 # ///
 
 """ask-claude: Query Claude from your terminal."""
@@ -15,19 +15,53 @@ VALID_MODES = ("plain", "stream", "stream+markdown")
 
 
 def load_config() -> dict:
-    api_key = os.environ.get("ASK_CLAUDE_API_KEY")
-    if not api_key:
+    provider = os.environ.get("ASK_CLAUDE_PROVIDER", "direct")
+    if provider not in ("direct", "bedrock"):
         print(
-            "Error: ASK_CLAUDE_API_KEY is not set. Run install.sh or set it manually.",
+            "Error: ASK_CLAUDE_PROVIDER must be 'direct' or 'bedrock'.",
             file=sys.stderr,
         )
         sys.exit(1)
+
+    api_key = None
+    bedrock_api_key = None
+
+    if provider == "direct":
+        api_key = os.environ.get("ASK_CLAUDE_API_KEY")
+        if not api_key:
+            print(
+                "Error: ASK_CLAUDE_API_KEY is not set. Run install.sh or set it manually.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+    else:
+        bedrock_api_key = os.environ.get("ASK_CLAUDE_BEDROCK_API_KEY")
+        if not bedrock_api_key:
+            print(
+                "Error: ASK_CLAUDE_BEDROCK_API_KEY is not set. Run install.sh or set it manually.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+    default_model = (
+        "claude-sonnet-4-6" if provider == "direct" else "anthropic.claude-sonnet-4-6"
+    )
+    aws_region = (
+        os.environ.get("ASK_CLAUDE_AWS_REGION")
+        or os.environ.get("AWS_REGION")
+        or os.environ.get("AWS_DEFAULT_REGION")
+        or "us-west-2"
+    )
+
     return {
+        "provider": provider,
         "api_key": api_key,
-        "model": os.environ.get("ASK_CLAUDE_MODEL", "claude-sonnet-4-6"),
+        "bedrock_api_key": bedrock_api_key,
+        "model": os.environ.get("ASK_CLAUDE_MODEL", default_model),
         "system": os.environ.get("ASK_CLAUDE_SYSTEM") or None,
         "max_tokens": int(os.environ.get("ASK_CLAUDE_MAX_TOKENS", "8096")),
         "output": os.environ.get("ASK_CLAUDE_OUTPUT", "stream+markdown"),
+        "aws_region": aws_region,
     }
 
 
@@ -53,6 +87,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def resolve_output_mode(cli_mode: Optional[str], env_mode: Optional[str]) -> str:
     return cli_mode or env_mode or "stream+markdown"
+
+
+def build_client(config: dict):
+    """Construct the appropriate Anthropic client based on provider."""
+    import anthropic
+
+    if config["provider"] == "direct":
+        return anthropic.Anthropic(api_key=config["api_key"])
+    else:
+        os.environ["AWS_BEARER_TOKEN_BEDROCK"] = config["bedrock_api_key"]
+        return anthropic.AnthropicBedrock(aws_region=config["aws_region"])
 
 
 def _extract_text_events(stream: Iterator) -> Iterator[str]:
@@ -104,8 +149,8 @@ def _handle_api_error(e: Exception) -> None:
 
 
 def run_single_shot(prompt: str, config: dict, output_mode: str) -> None:
-    import anthropic
-    client = anthropic.Anthropic(api_key=config["api_key"])
+    import anthropic  # needed for error types in except clause
+    client = build_client(config)
 
     stream_kwargs = dict(
         model=config["model"],
@@ -128,6 +173,7 @@ def run_single_shot(prompt: str, config: dict, output_mode: str) -> None:
 
 
 def run_repl(config: dict, output_mode: str) -> None:
+    import anthropic  # needed for error types in except clause
     history: list[dict] = []
 
     print("Claude REPL — type /exit or /quit to exit.\n")
@@ -151,8 +197,7 @@ def run_repl(config: dict, output_mode: str) -> None:
         history.append({"role": "user", "content": user_input})
 
         if client is None:
-            import anthropic
-            client = anthropic.Anthropic(api_key=config["api_key"])
+            client = build_client(config)
 
         stream_kwargs = dict(
             model=config["model"],

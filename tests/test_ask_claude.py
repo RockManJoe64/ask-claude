@@ -56,6 +56,139 @@ def test_load_config_custom_values(mod, monkeypatch):
     assert config["output"] == "plain"
 
 
+def test_load_config_provider_defaults_to_direct(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
+    monkeypatch.delenv("ASK_CLAUDE_PROVIDER", raising=False)
+    config = mod.load_config()
+    assert config["provider"] == "direct"
+
+
+def test_load_config_invalid_provider_exits(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "invalid")
+    monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
+    with pytest.raises(SystemExit) as exc:
+        mod.load_config()
+    assert exc.value.code != 0
+
+
+def test_load_config_bedrock_reads_bedrock_api_key(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "bedrock")
+    monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "bedrock-key")
+    monkeypatch.delenv("ASK_CLAUDE_API_KEY", raising=False)
+    config = mod.load_config()
+    assert config["bedrock_api_key"] == "bedrock-key"
+
+
+def test_load_config_bedrock_missing_key_exits(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "bedrock")
+    monkeypatch.delenv("ASK_CLAUDE_BEDROCK_API_KEY", raising=False)
+    monkeypatch.delenv("ASK_CLAUDE_API_KEY", raising=False)
+    with pytest.raises(SystemExit) as exc:
+        mod.load_config()
+    assert exc.value.code != 0
+
+
+def test_load_config_direct_default_model(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "direct")
+    monkeypatch.delenv("ASK_CLAUDE_MODEL", raising=False)
+    config = mod.load_config()
+    assert config["model"] == "claude-sonnet-4-6"
+
+
+def test_load_config_bedrock_default_model(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "bedrock")
+    monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "key")
+    monkeypatch.delenv("ASK_CLAUDE_MODEL", raising=False)
+    config = mod.load_config()
+    assert config["model"] == "anthropic.claude-sonnet-4-6"
+
+
+def test_load_config_region_ask_claude_aws_region_wins(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "bedrock")
+    monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "key")
+    monkeypatch.setenv("ASK_CLAUDE_AWS_REGION", "eu-west-1")
+    monkeypatch.setenv("AWS_REGION", "us-east-1")
+    config = mod.load_config()
+    assert config["aws_region"] == "eu-west-1"
+
+
+def test_load_config_region_falls_back_to_aws_region(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "bedrock")
+    monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "key")
+    monkeypatch.delenv("ASK_CLAUDE_AWS_REGION", raising=False)
+    monkeypatch.setenv("AWS_REGION", "ap-southeast-1")
+    monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
+    config = mod.load_config()
+    assert config["aws_region"] == "ap-southeast-1"
+
+
+def test_load_config_region_falls_back_to_aws_default_region(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "bedrock")
+    monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "key")
+    monkeypatch.delenv("ASK_CLAUDE_AWS_REGION", raising=False)
+    monkeypatch.delenv("AWS_REGION", raising=False)
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "ca-central-1")
+    config = mod.load_config()
+    assert config["aws_region"] == "ca-central-1"
+
+
+def test_load_config_region_defaults_to_us_west_2(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "bedrock")
+    monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "key")
+    monkeypatch.delenv("ASK_CLAUDE_AWS_REGION", raising=False)
+    monkeypatch.delenv("AWS_REGION", raising=False)
+    monkeypatch.delenv("AWS_DEFAULT_REGION", raising=False)
+    config = mod.load_config()
+    assert config["aws_region"] == "us-west-2"
+
+
+def test_build_client_direct_creates_anthropic_client(mod, monkeypatch):
+    mock_anthropic = MagicMock()
+    sys.modules["anthropic"] = mock_anthropic
+
+    config = {
+        "provider": "direct",
+        "api_key": "test-key",
+        "bedrock_api_key": None,
+        "model": "claude-sonnet-4-6",
+        "system": None,
+        "max_tokens": 8096,
+        "output": "plain",
+        "aws_region": "us-west-2",
+    }
+
+    try:
+        mod.build_client(config)
+        mock_anthropic.Anthropic.assert_called_once_with(api_key="test-key")
+    finally:
+        sys.modules.pop("anthropic", None)
+
+
+def test_build_client_bedrock_creates_bedrock_client(mod, monkeypatch):
+    mock_anthropic = MagicMock()
+    sys.modules["anthropic"] = mock_anthropic
+
+    config = {
+        "provider": "bedrock",
+        "api_key": None,
+        "bedrock_api_key": "bedrock-key-123",
+        "model": "anthropic.claude-sonnet-4-6",
+        "system": None,
+        "max_tokens": 8096,
+        "output": "plain",
+        "aws_region": "us-west-2",
+    }
+
+    try:
+        mod.build_client(config)
+        assert os.environ.get("AWS_BEARER_TOKEN_BEDROCK") == "bedrock-key-123"
+        mock_anthropic.AnthropicBedrock.assert_called_once_with(aws_region="us-west-2")
+    finally:
+        sys.modules.pop("anthropic", None)
+        os.environ.pop("AWS_BEARER_TOKEN_BEDROCK", None)
+
+
 def test_parse_args_single_shot(mod):
     args = mod.parse_args(["hello world"])
     assert args.prompt == "hello world"
@@ -165,11 +298,14 @@ def test_single_shot_calls_api_and_renders(mod, monkeypatch):
     mock_client.messages.stream.return_value = mock_stream
 
     config = {
+        "provider": "direct",
         "api_key": "key",
+        "bedrock_api_key": None,
         "model": "claude-sonnet-4-6",
         "system": None,
         "max_tokens": 8096,
         "output": "plain",
+        "aws_region": "us-west-2",
     }
 
     # Mock anthropic module locally since it's lazily imported
@@ -200,11 +336,14 @@ def test_single_shot_passes_system_prompt(mod, monkeypatch):
     mock_client.messages.stream.return_value = mock_stream
 
     config = {
+        "provider": "direct",
         "api_key": "key",
+        "bedrock_api_key": None,
         "model": "claude-sonnet-4-6",
         "system": "Be brief.",
         "max_tokens": 8096,
         "output": "plain",
+        "aws_region": "us-west-2",
     }
 
     # Mock anthropic module locally since it's lazily imported
@@ -228,11 +367,19 @@ def test_repl_exits_on_slash_exit(mod, monkeypatch):
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
     config = {
+        "provider": "direct",
         "api_key": "key", "model": "claude-sonnet-4-6",
+        "bedrock_api_key": None,
         "system": None, "max_tokens": 8096, "output": "plain",
+        "aws_region": "us-west-2",
     }
-    # Should return without error
-    mod.run_repl(config, output_mode="plain")
+    mock_anthropic = MagicMock()
+    sys.modules["anthropic"] = mock_anthropic
+    try:
+        # Should return without error
+        mod.run_repl(config, output_mode="plain")
+    finally:
+        sys.modules.pop("anthropic", None)
 
 
 def test_repl_exits_on_slash_quit(mod, monkeypatch):
@@ -240,10 +387,18 @@ def test_repl_exits_on_slash_quit(mod, monkeypatch):
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
     config = {
+        "provider": "direct",
         "api_key": "key", "model": "claude-sonnet-4-6",
+        "bedrock_api_key": None,
         "system": None, "max_tokens": 8096, "output": "plain",
+        "aws_region": "us-west-2",
     }
-    mod.run_repl(config, output_mode="plain")
+    mock_anthropic = MagicMock()
+    sys.modules["anthropic"] = mock_anthropic
+    try:
+        mod.run_repl(config, output_mode="plain")
+    finally:
+        sys.modules.pop("anthropic", None)
 
 
 def test_repl_sends_history(mod, monkeypatch):
@@ -265,8 +420,11 @@ def test_repl_sends_history(mod, monkeypatch):
     monkeypatch.setattr("builtins.input", fake_input)
 
     config = {
+        "provider": "direct",
         "api_key": "key", "model": "claude-sonnet-4-6",
+        "bedrock_api_key": None,
         "system": None, "max_tokens": 8096, "output": "plain",
+        "aws_region": "us-west-2",
     }
 
     mock_anthropic = MagicMock()
@@ -331,8 +489,11 @@ def test_api_error_exits_cleanly(mod, monkeypatch):
     _sys.modules["anthropic"] = mock_anthropic
 
     config = {
+        "provider": "direct",
         "api_key": "bad-key", "model": "claude-sonnet-4-6",
+        "bedrock_api_key": None,
         "system": None, "max_tokens": 8096, "output": "plain",
+        "aws_region": "us-west-2",
     }
 
     try:
