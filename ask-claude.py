@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["anthropic", "rich"]
+# dependencies = ["anthropic[bedrock]", "rich"]
 # ///
 
 """ask-claude: Query Claude from your terminal."""
@@ -89,6 +89,17 @@ def resolve_output_mode(cli_mode: Optional[str], env_mode: Optional[str]) -> str
     return cli_mode or env_mode or "stream+markdown"
 
 
+def build_client(config: dict):
+    """Construct the appropriate Anthropic client based on provider."""
+    import anthropic
+
+    if config["provider"] == "direct":
+        return anthropic.Anthropic(api_key=config["api_key"])
+    else:
+        os.environ["AWS_BEARER_TOKEN_BEDROCK"] = config["bedrock_api_key"]
+        return anthropic.AnthropicBedrock(aws_region=config["aws_region"])
+
+
 def _extract_text_events(stream: Iterator) -> Iterator[str]:
     """Yield text strings from Anthropic streaming events."""
     for event in stream:
@@ -138,8 +149,8 @@ def _handle_api_error(e: Exception) -> None:
 
 
 def run_single_shot(prompt: str, config: dict, output_mode: str) -> None:
-    import anthropic
-    client = anthropic.Anthropic(api_key=config["api_key"])
+    import anthropic  # needed for error types in except clause
+    client = build_client(config)
 
     stream_kwargs = dict(
         model=config["model"],
@@ -162,6 +173,7 @@ def run_single_shot(prompt: str, config: dict, output_mode: str) -> None:
 
 
 def run_repl(config: dict, output_mode: str) -> None:
+    import anthropic  # needed for error types in except clause
     history: list[dict] = []
 
     print("Claude REPL — type /exit or /quit to exit.\n")
@@ -185,8 +197,7 @@ def run_repl(config: dict, output_mode: str) -> None:
         history.append({"role": "user", "content": user_input})
 
         if client is None:
-            import anthropic
-            client = anthropic.Anthropic(api_key=config["api_key"])
+            client = build_client(config)
 
         stream_kwargs = dict(
             model=config["model"],
