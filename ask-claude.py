@@ -78,7 +78,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "prompt",
-        nargs="?",
+        nargs="*",
         default=None,
         help="Prompt for single-shot mode. Omit to start REPL.",
     )
@@ -228,7 +228,7 @@ def main() -> None:
     output_mode = resolve_output_mode(args.mode, config["output"])
 
     if args.prompt:
-        run_single_shot(args.prompt, config, output_mode)
+        run_single_shot(" ".join(args.prompt), config, output_mode)
     else:
         run_repl(config, output_mode)
 

@@ -191,26 +191,31 @@ def test_build_client_bedrock_creates_bedrock_client(mod, monkeypatch):
 
 def test_parse_args_single_shot(mod):
     args = mod.parse_args(["hello world"])
-    assert args.prompt == "hello world"
+    assert args.prompt == ["hello world"]
     assert args.mode is None
+
+
+def test_parse_args_multi_word_prompt(mod):
+    args = mod.parse_args(["Give", "me", "a", "summary"])
+    assert args.prompt == ["Give", "me", "a", "summary"]
 
 
 def test_parse_args_repl_no_args(mod):
     args = mod.parse_args([])
-    assert args.prompt is None
+    assert args.prompt == []
     assert args.mode is None
 
 
 def test_parse_args_mode_flag_short(mod):
     args = mod.parse_args(["-m", "plain", "hello"])
     assert args.mode == "plain"
-    assert args.prompt == "hello"
+    assert args.prompt == ["hello"]
 
 
 def test_parse_args_mode_flag_long(mod):
     args = mod.parse_args(["--mode", "stream"])
     assert args.mode == "stream"
-    assert args.prompt is None
+    assert args.prompt == []
 
 
 def test_parse_args_invalid_mode_exits(mod):
