@@ -57,40 +57,78 @@ fi
 echo ""
 info "Configuration"
 
-printf 'Provider [direct/bedrock] (direct): '
+# --- load existing config (if present) ---
+if [ -f "$CONFIG_FILE" ]; then
+  . "$CONFIG_FILE"
+  info "Existing configuration found — press Enter to keep current values."
+fi
+
+CURRENT_PROVIDER="${ASK_CLAUDE_PROVIDER:-direct}"
+printf "Provider [direct/bedrock] ($CURRENT_PROVIDER): "
 read -r PROVIDER < /dev/tty
-PROVIDER="${PROVIDER:-direct}"
+PROVIDER="${PROVIDER:-$CURRENT_PROVIDER}"
 if [ "$PROVIDER" != "direct" ] && [ "$PROVIDER" != "bedrock" ]; then
   err "Provider must be 'direct' or 'bedrock'."
 fi
 
 if [ "$PROVIDER" = "direct" ]; then
-  printf 'Anthropic API key (required): '
-  read -rs API_KEY < /dev/tty
-  echo "sk-***"
-  [ -z "$API_KEY" ] && err "API key is required."
+  if [ -n "$ASK_CLAUDE_API_KEY" ]; then
+    printf 'Anthropic API key (press Enter to keep existing): '
+    read -rs API_KEY < /dev/tty
+    if [ -n "$API_KEY" ]; then
+      echo "sk-***"
+    else
+      echo ""
+      API_KEY="$ASK_CLAUDE_API_KEY"
+    fi
+  else
+    printf 'Anthropic API key (required): '
+    read -rs API_KEY < /dev/tty
+    echo "sk-***"
+    [ -z "$API_KEY" ] && err "API key is required."
+  fi
   DEFAULT_MODEL="claude-sonnet-4-6"
 else
-  printf 'Bedrock API key (required): '
-  read -rs BEDROCK_API_KEY < /dev/tty
-  echo "sk-***"
-  [ -z "$BEDROCK_API_KEY" ] && err "Bedrock API key is required."
-  printf 'AWS region [us-west-2]: '
+  if [ -n "$ASK_CLAUDE_BEDROCK_API_KEY" ]; then
+    printf 'Bedrock API key (press Enter to keep existing): '
+    read -rs BEDROCK_API_KEY < /dev/tty
+    if [ -n "$BEDROCK_API_KEY" ]; then
+      echo "sk-***"
+    else
+      echo ""
+      BEDROCK_API_KEY="$ASK_CLAUDE_BEDROCK_API_KEY"
+    fi
+  else
+    printf 'Bedrock API key (required): '
+    read -rs BEDROCK_API_KEY < /dev/tty
+    echo "sk-***"
+    [ -z "$BEDROCK_API_KEY" ] && err "Bedrock API key is required."
+  fi
+  CURRENT_REGION="${ASK_CLAUDE_AWS_REGION:-us-west-2}"
+  printf "AWS region [$CURRENT_REGION]: "
   read -r AWS_REGION < /dev/tty
-  AWS_REGION="${AWS_REGION:-us-west-2}"
+  AWS_REGION="${AWS_REGION:-$CURRENT_REGION}"
   DEFAULT_MODEL="us.anthropic.claude-sonnet-4-6"
 fi
 
-printf "Model [$DEFAULT_MODEL]: "
+CURRENT_MODEL="${ASK_CLAUDE_MODEL:-$DEFAULT_MODEL}"
+printf "Model [$CURRENT_MODEL]: "
 read -r MODEL < /dev/tty
-MODEL="${MODEL:-$DEFAULT_MODEL}"
+MODEL="${MODEL:-$CURRENT_MODEL}"
 
-printf 'System prompt (optional, press Enter to skip): '
+CURRENT_SYSTEM="${ASK_CLAUDE_SYSTEM:-}"
+if [ -n "$CURRENT_SYSTEM" ]; then
+  printf 'System prompt (press Enter to keep existing): '
+else
+  printf 'System prompt (optional, press Enter to skip): '
+fi
 read -r SYSTEM < /dev/tty
+SYSTEM="${SYSTEM:-$CURRENT_SYSTEM}"
 
-printf 'Output mode — plain/stream/stream+markdown [stream+markdown]: '
+CURRENT_OUTPUT="${ASK_CLAUDE_OUTPUT:-stream+markdown}"
+printf "Output mode — plain/stream/stream+markdown [$CURRENT_OUTPUT]: "
 read -r OUTPUT < /dev/tty
-OUTPUT="${OUTPUT:-stream+markdown}"
+OUTPUT="${OUTPUT:-$CURRENT_OUTPUT}"
 
 # --- write config ---
 mkdir -p "$CONFIG_DIR"
