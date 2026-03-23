@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 
 def load_module():
-    spec = importlib.util.spec_from_file_location("ask_claude", "ask-claude.py")
+    spec = importlib.util.spec_from_file_location("askclaude", "askclaude.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -56,11 +56,11 @@ def test_load_config_custom_values(mod, monkeypatch):
     assert config["output"] == "plain"
 
 
-def test_load_config_provider_defaults_to_direct(mod, monkeypatch):
+def test_load_config_provider_defaults_to_anthropic(mod, monkeypatch):
     monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
     monkeypatch.delenv("ASK_CLAUDE_PROVIDER", raising=False)
     config = mod.load_config()
-    assert config["provider"] == "direct"
+    assert config["provider"] == "anthropic"
 
 
 def test_load_config_invalid_provider_exits(mod, monkeypatch):
@@ -88,9 +88,9 @@ def test_load_config_bedrock_missing_key_exits(mod, monkeypatch):
     assert exc.value.code != 0
 
 
-def test_load_config_direct_default_model(mod, monkeypatch):
+def test_load_config_anthropic_default_model(mod, monkeypatch):
     monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
-    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "direct")
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "anthropic")
     monkeypatch.delenv("ASK_CLAUDE_MODEL", raising=False)
     config = mod.load_config()
     assert config["model"] == "claude-sonnet-4-6"
@@ -143,12 +143,12 @@ def test_load_config_region_defaults_to_us_west_2(mod, monkeypatch):
     assert config["aws_region"] == "us-west-2"
 
 
-def test_build_client_direct_creates_anthropic_client(mod, monkeypatch):
+def test_build_client_anthropic_creates_anthropic_client(mod, monkeypatch):
     mock_anthropic = MagicMock()
     sys.modules["anthropic"] = mock_anthropic
 
     config = {
-        "provider": "direct",
+        "provider": "anthropic",
         "api_key": "test-key",
         "bedrock_api_key": None,
         "model": "claude-sonnet-4-6",
@@ -304,7 +304,7 @@ def test_single_shot_calls_api_and_renders(mod, monkeypatch):
     mock_client.messages.stream.return_value = mock_stream
 
     config = {
-        "provider": "direct",
+        "provider": "anthropic",
         "api_key": "key",
         "bedrock_api_key": None,
         "model": "claude-sonnet-4-6",
@@ -342,7 +342,7 @@ def test_single_shot_passes_system_prompt(mod, monkeypatch):
     mock_client.messages.stream.return_value = mock_stream
 
     config = {
-        "provider": "direct",
+        "provider": "anthropic",
         "api_key": "key",
         "bedrock_api_key": None,
         "model": "claude-sonnet-4-6",
@@ -373,7 +373,7 @@ def test_repl_exits_on_slash_exit(mod, monkeypatch):
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
     config = {
-        "provider": "direct",
+        "provider": "anthropic",
         "api_key": "key", "model": "claude-sonnet-4-6",
         "bedrock_api_key": None,
         "system": None, "max_tokens": 8096, "output": "plain",
@@ -393,7 +393,7 @@ def test_repl_exits_on_slash_quit(mod, monkeypatch):
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
 
     config = {
-        "provider": "direct",
+        "provider": "anthropic",
         "api_key": "key", "model": "claude-sonnet-4-6",
         "bedrock_api_key": None,
         "system": None, "max_tokens": 8096, "output": "plain",
@@ -426,7 +426,7 @@ def test_repl_sends_history(mod, monkeypatch):
     monkeypatch.setattr("builtins.input", fake_input)
 
     config = {
-        "provider": "direct",
+        "provider": "anthropic",
         "api_key": "key", "model": "claude-sonnet-4-6",
         "bedrock_api_key": None,
         "system": None, "max_tokens": 8096, "output": "plain",
@@ -449,7 +449,7 @@ def test_repl_sends_history(mod, monkeypatch):
 
 def test_main_single_shot_dispatches(mod, monkeypatch):
     monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
-    monkeypatch.setattr("sys.argv", ["ask-claude", "hello"])
+    monkeypatch.setattr("sys.argv", ["askclaude", "hello"])
 
     called_with = {}
     def fake_single_shot(prompt, config, output_mode):
@@ -463,7 +463,7 @@ def test_main_single_shot_dispatches(mod, monkeypatch):
 
 def test_main_repl_dispatches(mod, monkeypatch):
     monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
-    monkeypatch.setattr("sys.argv", ["ask-claude"])
+    monkeypatch.setattr("sys.argv", ["askclaude"])
 
     called = {}
     def fake_repl(config, output_mode):
@@ -495,7 +495,7 @@ def test_api_error_exits_cleanly(mod, monkeypatch):
     _sys.modules["anthropic"] = mock_anthropic
 
     config = {
-        "provider": "direct",
+        "provider": "anthropic",
         "api_key": "bad-key", "model": "claude-sonnet-4-6",
         "bedrock_api_key": None,
         "system": None, "max_tokens": 8096, "output": "plain",
@@ -508,3 +508,61 @@ def test_api_error_exits_cleanly(mod, monkeypatch):
         assert exc.value.code != 0
     finally:
         _sys.modules.pop("anthropic", None)
+
+
+# --- MODEL_TIERS resolution tests ---
+
+def test_model_tier_sonnet_anthropic(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "anthropic")
+    monkeypatch.setenv("ASK_CLAUDE_MODEL", "sonnet")
+    config = mod.load_config()
+    assert config["model"] == "claude-sonnet-4-6"
+
+
+def test_model_tier_opus_anthropic(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "anthropic")
+    monkeypatch.setenv("ASK_CLAUDE_MODEL", "opus")
+    config = mod.load_config()
+    assert config["model"] == "claude-opus-4-6"
+
+
+def test_model_tier_haiku_anthropic(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "anthropic")
+    monkeypatch.setenv("ASK_CLAUDE_MODEL", "haiku")
+    config = mod.load_config()
+    assert config["model"] == "claude-haiku-4-5-20251001"
+
+
+def test_model_tier_sonnet_bedrock(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "key")
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "bedrock")
+    monkeypatch.setenv("ASK_CLAUDE_MODEL", "sonnet")
+    config = mod.load_config()
+    assert config["model"] == "us.anthropic.claude-sonnet-4-6"
+
+
+def test_model_tier_opus_bedrock(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "key")
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "bedrock")
+    monkeypatch.setenv("ASK_CLAUDE_MODEL", "opus")
+    config = mod.load_config()
+    assert config["model"] == "us.anthropic.claude-opus-4-6-v1"
+
+
+def test_model_tier_haiku_bedrock(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_BEDROCK_API_KEY", "key")
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "bedrock")
+    monkeypatch.setenv("ASK_CLAUDE_MODEL", "haiku")
+    config = mod.load_config()
+    assert config["model"] == "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+
+
+def test_model_raw_id_passthrough(mod, monkeypatch):
+    monkeypatch.setenv("ASK_CLAUDE_API_KEY", "key")
+    monkeypatch.setenv("ASK_CLAUDE_PROVIDER", "anthropic")
+    monkeypatch.setenv("ASK_CLAUDE_MODEL", "claude-3-5-sonnet-20241022")
+    config = mod.load_config()
+    assert config["model"] == "claude-3-5-sonnet-20241022"

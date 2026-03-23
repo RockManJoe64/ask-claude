@@ -1,4 +1,4 @@
-# ask-claude
+# askclaude
 
 <img src="images/Ask-Claude-Mascot.png" width="256" height="256" alt="Ask Claude Mascot">
 
@@ -16,34 +16,46 @@ Requires: [uv](https://docs.astral.sh/uv/), `git`, `curl`
 
 ```sh
 # Single-shot
-ask-claude "explain closures in one paragraph"
+askclaude "explain closures in one paragraph"
 
 # Interactive REPL
-ask-claude
+askclaude
 
 # Override output mode
-ask-claude -m plain "summarise this"
-ask-claude --mode stream
+askclaude -m plain "summarise this"
+askclaude --mode stream
 ```
 
 Type `/exit` or `/quit` to leave the REPL. Ctrl+C and Ctrl+D also work.
 
 ## Configuration
 
-Set in `~/.config/ask-claude/config` (created by the installer):
+Set in `~/.config/askclaude/config` (created by the installer):
 
 | Variable | Default | Description |
 |---|---|---|
-| `ASK_CLAUDE_PROVIDER` | `direct` | Provider: `direct` (Anthropic API) or `bedrock` (AWS Bedrock) |
-| `ASK_CLAUDE_API_KEY` | *(required for direct)* | Your Anthropic API key |
-| `ASK_CLAUDE_MODEL` | `claude-sonnet-4-6` | Model to use |
+| `ASK_CLAUDE_PROVIDER` | `anthropic` | Provider: `anthropic` (Anthropic API) or `bedrock` (AWS Bedrock) |
+| `ASK_CLAUDE_API_KEY` | *(required for anthropic)* | Your Anthropic API key |
+| `ASK_CLAUDE_MODEL` | `sonnet` | Model tier: `sonnet`, `opus`, or `haiku` |
 | `ASK_CLAUDE_SYSTEM` | *(none)* | System prompt for every session |
 | `ASK_CLAUDE_MAX_TOKENS` | `8096` | Max tokens per response |
 | `ASK_CLAUDE_OUTPUT` | `stream+markdown` | Output mode: `plain`, `stream`, `stream+markdown` |
 
+### Model tiers
+
+Set `ASK_CLAUDE_MODEL` to a tier name — `askclaude` resolves it to the correct provider-specific model ID automatically:
+
+| Tier | Anthropic API | AWS Bedrock |
+|---|---|---|
+| `sonnet` | `claude-sonnet-4-6` | `us.anthropic.claude-sonnet-4-6` |
+| `opus` | `claude-opus-4-6` | `us.anthropic.claude-opus-4-6-v1` |
+| `haiku` | `claude-haiku-4-5-20251001` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
+
+You can also set a raw model ID directly if you need a specific version.
+
 ## AWS Bedrock
 
-ask-claude supports AWS Bedrock as an alternative to the direct Anthropic API. Bedrock authenticates using [Amazon Bedrock API keys](https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys-how.html).
+askclaude supports AWS Bedrock as an alternative to the direct Anthropic API. Bedrock authenticates using [Amazon Bedrock API keys](https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys-how.html).
 
 ### Setup via installer
 
@@ -51,13 +63,13 @@ Run `install.sh` and select `bedrock` at the provider prompt. The installer will
 
 ### Manual setup
 
-Add the following to `~/.config/ask-claude/config`:
+Add the following to `~/.config/askclaude/config`:
 
 ```sh
 export ASK_CLAUDE_PROVIDER="bedrock"
 export ASK_CLAUDE_BEDROCK_API_KEY="your-bedrock-api-key"
 export ASK_CLAUDE_AWS_REGION="us-west-2"
-export ASK_CLAUDE_MODEL="us.anthropic.claude-sonnet-4-6"
+export ASK_CLAUDE_MODEL="sonnet"
 ```
 
 ### Bedrock-specific variables
@@ -66,18 +78,6 @@ export ASK_CLAUDE_MODEL="us.anthropic.claude-sonnet-4-6"
 |---|---|---|
 | `ASK_CLAUDE_BEDROCK_API_KEY` | *(required for bedrock)* | Your Amazon Bedrock API key |
 | `ASK_CLAUDE_AWS_REGION` | `us-west-2` | AWS region. Also reads `AWS_REGION` and `AWS_DEFAULT_REGION` as fallbacks |
-
-### Bedrock model IDs
-
-Bedrock uses different model IDs from the direct API. The default when `ASK_CLAUDE_PROVIDER=bedrock` is `us.anthropic.claude-sonnet-4-6`. Examples:
-
-| Model | Bedrock model ID |
-|---|---|
-| Claude Sonnet 4.6 | `us.anthropic.claude-sonnet-4-6` |
-| Claude Opus 4.6 | `global.anthropic.claude-opus-4-6-v1` |
-| Claude Haiku 4.5 | `anthropic.claude-haiku-4-5-20251001-v1:0` |
-
-See the [AWS Bedrock model IDs documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) for the full list.
 
 ## Output Modes
 

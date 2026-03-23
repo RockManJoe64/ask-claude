@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[ -f "$HOME/.config/askclaude/config" ] && source "$HOME/.config/askclaude/config"
+uv run "$(dirname "$(realpath "$0")")/askclaude.py" "$@"
