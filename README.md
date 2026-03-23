@@ -4,6 +4,8 @@
 
 Query Claude from your terminal — single-shot or interactive REPL.
 
+[![asciicast](https://asciinema.org/a/861413.svg)](https://asciinema.org/a/861413)
+
 ## Install
 
 ```sh
