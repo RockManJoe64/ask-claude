@@ -74,7 +74,7 @@ fi
 
 # --- interactive config via setup.py ---
 echo ""
-uv run "$INSTALL_DIR/setup.py" --config-file "$CONFIG_FILE"
+uv run "$INSTALL_DIR/setup.py" --config-file "$CONFIG_FILE" < /dev/tty
 # Append PATH export using bash's POSIX-formatted path (avoids Windows path translation issues)
 echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$CONFIG_FILE"
 
