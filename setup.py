@@ -45,10 +45,26 @@ def write_config(config_file: str, values: dict) -> None:
         f.write("\n".join(lines) + "\n")
 
 
+def _ensure_tty() -> None:
+    """Reopen stdin from /dev/tty if it isn't a terminal.
+
+    When the installer is piped (curl … | sh), fd 0 is the pipe and
+    prompt_toolkit / questionary refuse to run.  Replacing fd 0 with
+    /dev/tty at the OS level makes them see a real terminal.
+    """
+    if not os.isatty(sys.stdin.fileno()):
+        tty_fd = os.open("/dev/tty", os.O_RDONLY)
+        os.dup2(tty_fd, 0)
+        os.close(tty_fd)
+        sys.stdin = os.fdopen(0, "r")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Configure askclaude interactively.")
     parser.add_argument("--config-file", default=os.path.expanduser("~/.config/askclaude/config"))
     args = parser.parse_args()
+
+    _ensure_tty()
 
     import questionary
     from rich.console import Console
