@@ -55,7 +55,8 @@ def _ensure_tty() -> None:
     /dev/tty at the OS level makes them see a real terminal.
     """
     if not os.isatty(sys.stdin.fileno()):
-        tty_fd = os.open("/dev/tty", os.O_RDONLY)
+        tty_path = "CONIN$" if sys.platform == "win32" else "/dev/tty"
+        tty_fd = os.open(tty_path, os.O_RDONLY)
         os.dup2(tty_fd, 0)
         os.close(tty_fd)
         sys.stdin = os.fdopen(0, "r")
