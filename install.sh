@@ -53,7 +53,9 @@ if [ -d "$OLD_CONFIG" ]; then
 fi
 for rc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.config/fish/config.fish"; do
   if [ -f "$rc" ] && grep -q "ask-claude" "$rc" 2>/dev/null; then
-    sed -i '/ask-claude/d' "$rc"
+    # sed -i is BSD-incompatible on macOS; use a temp file instead
+    _tmp="$(mktemp)"
+    grep -v 'ask-claude' "$rc" > "$_tmp" && mv "$_tmp" "$rc"
     info "Removed old ask-claude entries from $rc"
   fi
 done
