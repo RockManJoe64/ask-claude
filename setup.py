@@ -41,6 +41,8 @@ def write_config(config_file: str, values: dict) -> None:
         lines.append(f'export ASK_CLAUDE_AWS_REGION="{values["aws_region"]}"')
     if values.get("system"):
         lines.append(f'export ASK_CLAUDE_SYSTEM="{values["system"]}"')
+    # zsh: prevent glob expansion on natural-language arguments (?, *, etc.)
+    lines.append('[ -n "$ZSH_VERSION" ] && alias askclaude=\'noglob askclaude\'')
     with open(config_file, "w") as f:
         f.write("\n".join(lines) + "\n")
 

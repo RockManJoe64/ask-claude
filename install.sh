@@ -83,8 +83,6 @@ echo ""
 uv run "$INSTALL_DIR/setup.py" --config-file "$CONFIG_FILE"
 # Append PATH export using bash's POSIX-formatted path (avoids Windows path translation issues)
 echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$CONFIG_FILE"
-# zsh: prevent glob expansion on natural-language arguments (?, *, etc.)
-echo '[ -n "$ZSH_VERSION" ] && alias askclaude='\''noglob askclaude'\''' >> "$CONFIG_FILE"
 
 # --- make executable + remove stale bin entry ---
 chmod +x "$INSTALL_DIR/askclaude"
