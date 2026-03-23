@@ -100,10 +100,24 @@ detect_rc() {
 RC_FILE="$(detect_rc)"
 if [ -f "$RC_FILE" ] && grep -qF "$CONFIG_FILE" "$RC_FILE" 2>/dev/null; then
   info "Shell rc already configured ($RC_FILE). Skipping."
+  # Ensure noglob alias is present for existing zsh installs
+  case "${SHELL:-}" in
+    */zsh)
+      if ! grep -q "noglob askclaude" "$RC_FILE" 2>/dev/null; then
+        echo "alias askclaude='noglob askclaude'" >> "$RC_FILE"
+        ok "Added noglob alias to $RC_FILE"
+      fi
+      ;;
+  esac
 else
   echo "" >> "$RC_FILE"
   echo "# askclaude" >> "$RC_FILE"
   echo "$SOURCE_LINE" >> "$RC_FILE"
+  case "${SHELL:-}" in
+    */zsh)
+      echo "alias askclaude='noglob askclaude'" >> "$RC_FILE"
+      ;;
+  esac
   ok "Added source line to $RC_FILE"
 fi
 
