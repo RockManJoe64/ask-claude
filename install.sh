@@ -2,26 +2,25 @@
 set -e
 
 REPO_URL="https://github.com/rockmanjoe64/ask-claude.git"
-INSTALL_DIR="$HOME/.local/share/ask-claude"
+INSTALL_DIR="$HOME/.local/share/askclaude"
 BIN_DIR="$HOME/.local/bin"
-CONFIG_DIR="$HOME/.config/ask-claude"
+CONFIG_DIR="$HOME/.config/askclaude"
 CONFIG_FILE="$CONFIG_DIR/config"
 
 # --- helpers ---
-info()  { printf '\033[0;34m[ask-claude]\033[0m %s\n' "$1"; }
-ok()    { printf '\033[0;32m[ask-claude]\033[0m %s\n' "$1"; }
-err()   { printf '\033[0;31m[ask-claude]\033[0m %s\n' "$1" >&2; exit 1; }
-prompt(){ printf '%s' "$1"; read -r REPLY < /dev/tty; echo "$REPLY"; }
+info()  { printf '\033[0;34m[askclaude]\033[0m %s\n' "$1"; }
+ok()    { printf '\033[0;32m[askclaude]\033[0m %s\n' "$1"; }
+err()   { printf '\033[0;31m[askclaude]\033[0m %s\n' "$1" >&2; exit 1; }
 
 # --- summary ---
 echo ""
-echo "ask-claude installer"
+echo "askclaude installer"
 echo "===================="
 echo "This script will:"
 echo "  1. Check prerequisites (uv, curl, git)"
-echo "  2. Clone/update the repo to $INSTALL_DIR"
-echo "  3. Prompt for provider (direct/bedrock) and credentials"
-echo "  4. Write $CONFIG_FILE"
+echo "  2. Remove any previous ask-claude installation"
+echo "  3. Clone/update the repo to $INSTALL_DIR"
+echo "  4. Run interactive configuration via setup.py"
 echo "  5. Add $INSTALL_DIR to PATH"
 echo "  6. Add 'source $CONFIG_FILE' to your shell rc file"
 echo ""
@@ -41,6 +40,24 @@ for cmd in uv curl git; do
 done
 info "Prerequisites OK."
 
+# --- clean up old ask-claude installation ---
+OLD_INSTALL="$HOME/.local/share/ask-claude"
+OLD_CONFIG="$HOME/.config/ask-claude"
+if [ -d "$OLD_INSTALL" ]; then
+  info "Removing old ask-claude installation at $OLD_INSTALL..."
+  rm -rf "$OLD_INSTALL"
+fi
+if [ -d "$OLD_CONFIG" ]; then
+  info "Removing old ask-claude config at $OLD_CONFIG..."
+  rm -rf "$OLD_CONFIG"
+fi
+for rc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.config/fish/config.fish"; do
+  if [ -f "$rc" ] && grep -q "ask-claude" "$rc" 2>/dev/null; then
+    sed -i '/ask-claude/d' "$rc"
+    info "Removed old ask-claude entries from $rc"
+  fi
+done
+
 # --- clone or pull ---
 mkdir -p "$INSTALL_DIR"
 if [ -d "$INSTALL_DIR/.git" ]; then
@@ -53,111 +70,17 @@ else
   git clone --branch main "$REPO_URL" "$INSTALL_DIR"
 fi
 
-# --- config prompts ---
+# --- interactive config via setup.py ---
 echo ""
-info "Configuration"
-
-# --- load existing config (if present) ---
-if [ -f "$CONFIG_FILE" ]; then
-  . "$CONFIG_FILE"
-  info "Existing configuration found — press Enter to keep current values."
-fi
-
-CURRENT_PROVIDER="${ASK_CLAUDE_PROVIDER:-direct}"
-printf "Provider [direct/bedrock] ($CURRENT_PROVIDER): "
-read -r PROVIDER < /dev/tty
-PROVIDER="${PROVIDER:-$CURRENT_PROVIDER}"
-if [ "$PROVIDER" != "direct" ] && [ "$PROVIDER" != "bedrock" ]; then
-  err "Provider must be 'direct' or 'bedrock'."
-fi
-
-if [ "$PROVIDER" = "direct" ]; then
-  if [ -n "$ASK_CLAUDE_API_KEY" ]; then
-    printf 'Anthropic API key (press Enter to keep existing): '
-    read -rs API_KEY < /dev/tty
-    if [ -n "$API_KEY" ]; then
-      echo "sk-***"
-    else
-      echo ""
-      API_KEY="$ASK_CLAUDE_API_KEY"
-    fi
-  else
-    printf 'Anthropic API key (required): '
-    read -rs API_KEY < /dev/tty
-    echo "sk-***"
-    [ -z "$API_KEY" ] && err "API key is required."
-  fi
-  DEFAULT_MODEL="claude-sonnet-4-6"
-else
-  if [ -n "$ASK_CLAUDE_BEDROCK_API_KEY" ]; then
-    printf 'Bedrock API key (press Enter to keep existing): '
-    read -rs BEDROCK_API_KEY < /dev/tty
-    if [ -n "$BEDROCK_API_KEY" ]; then
-      echo "sk-***"
-    else
-      echo ""
-      BEDROCK_API_KEY="$ASK_CLAUDE_BEDROCK_API_KEY"
-    fi
-  else
-    printf 'Bedrock API key (required): '
-    read -rs BEDROCK_API_KEY < /dev/tty
-    echo "sk-***"
-    [ -z "$BEDROCK_API_KEY" ] && err "Bedrock API key is required."
-  fi
-  CURRENT_REGION="${ASK_CLAUDE_AWS_REGION:-us-west-2}"
-  printf "AWS region [$CURRENT_REGION]: "
-  read -r AWS_REGION < /dev/tty
-  AWS_REGION="${AWS_REGION:-$CURRENT_REGION}"
-  DEFAULT_MODEL="us.anthropic.claude-sonnet-4-6"
-fi
-
-CURRENT_MODEL="${ASK_CLAUDE_MODEL:-$DEFAULT_MODEL}"
-printf "Model [$CURRENT_MODEL]: "
-read -r MODEL < /dev/tty
-MODEL="${MODEL:-$CURRENT_MODEL}"
-
-CURRENT_SYSTEM="${ASK_CLAUDE_SYSTEM:-}"
-if [ -n "$CURRENT_SYSTEM" ]; then
-  printf 'System prompt (press Enter to keep existing): '
-else
-  printf 'System prompt (optional, press Enter to skip): '
-fi
-read -r SYSTEM < /dev/tty
-SYSTEM="${SYSTEM:-$CURRENT_SYSTEM}"
-
-CURRENT_OUTPUT="${ASK_CLAUDE_OUTPUT:-stream+markdown}"
-printf "Output mode — plain/stream/stream+markdown [$CURRENT_OUTPUT]: "
-read -r OUTPUT < /dev/tty
-OUTPUT="${OUTPUT:-$CURRENT_OUTPUT}"
-
-# --- write config ---
-mkdir -p "$CONFIG_DIR"
-cat > "$CONFIG_FILE" <<EOF
-# ask-claude configuration
-# Edit this file to change defaults. Re-run install.sh to reconfigure.
-export ASK_CLAUDE_PROVIDER="$PROVIDER"
-export ASK_CLAUDE_MODEL="$MODEL"
-export ASK_CLAUDE_OUTPUT="$OUTPUT"
-export PATH="$INSTALL_DIR:\$PATH"
-EOF
-if [ "$PROVIDER" = "direct" ]; then
-  echo "export ASK_CLAUDE_API_KEY=\"$API_KEY\"" >> "$CONFIG_FILE"
-else
-  echo "export ASK_CLAUDE_BEDROCK_API_KEY=\"$BEDROCK_API_KEY\"" >> "$CONFIG_FILE"
-  echo "export ASK_CLAUDE_AWS_REGION=\"$AWS_REGION\"" >> "$CONFIG_FILE"
-fi
-if [ -n "$SYSTEM" ]; then
-  echo "export ASK_CLAUDE_SYSTEM=\"$SYSTEM\"" >> "$CONFIG_FILE"
-fi
-ok "Config written to $CONFIG_FILE"
+uv run "$INSTALL_DIR/setup.py" --config-file "$CONFIG_FILE" --install-dir "$INSTALL_DIR"
 
 # --- make executable + remove stale bin entry ---
-chmod +x "$INSTALL_DIR/ask-claude"
-if [ -f "$BIN_DIR/ask-claude" ] || [ -L "$BIN_DIR/ask-claude" ]; then
-  rm -f "$BIN_DIR/ask-claude"
-  info "Removed stale $BIN_DIR/ask-claude"
+chmod +x "$INSTALL_DIR/askclaude"
+if [ -f "$BIN_DIR/askclaude" ] || [ -L "$BIN_DIR/askclaude" ]; then
+  rm -f "$BIN_DIR/askclaude"
+  info "Removed stale $BIN_DIR/askclaude"
 fi
-ok "ask-claude is ready at $INSTALL_DIR/ask-claude"
+ok "askclaude is ready at $INSTALL_DIR/askclaude"
 
 # --- shell rc patching ---
 SOURCE_LINE="source \"$CONFIG_FILE\""
@@ -175,7 +98,7 @@ if [ -f "$RC_FILE" ] && grep -qF "$CONFIG_FILE" "$RC_FILE" 2>/dev/null; then
   info "Shell rc already configured ($RC_FILE). Skipping."
 else
   echo "" >> "$RC_FILE"
-  echo "# ask-claude" >> "$RC_FILE"
+  echo "# askclaude" >> "$RC_FILE"
   echo "$SOURCE_LINE" >> "$RC_FILE"
   ok "Added source line to $RC_FILE"
 fi
@@ -184,13 +107,13 @@ fi
 echo ""
 ok "Installation complete!"
 echo ""
-printf '\033[0;33m  ACTION REQUIRED — activate ask-claude in this shell:\033[0m\n'
+printf '\033[0;33m  ACTION REQUIRED — activate askclaude in this shell:\033[0m\n'
 printf '\033[0;33m  source %s\033[0m\n' "$CONFIG_FILE"
 echo ""
 echo "  (New shells will activate automatically via your rc file.)"
 echo ""
 echo "  Usage:"
-echo "    ask-claude \"explain closures\"    # single-shot"
-echo "    ask-claude                        # interactive REPL"
-echo "    ask-claude -m plain \"hello\"      # override output mode"
+echo "    askclaude \"explain closures\"    # single-shot"
+echo "    askclaude                        # interactive REPL"
+echo "    askclaude -m plain \"hello\"      # override output mode"
 echo ""
