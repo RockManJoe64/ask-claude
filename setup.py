@@ -24,7 +24,7 @@ def parse_existing_config(config_file: str) -> dict:
     return config
 
 
-def write_config(config_file: str, install_dir: str, values: dict) -> None:
+def write_config(config_file: str, values: dict) -> None:
     """Write shell export statements to the config file."""
     os.makedirs(os.path.dirname(config_file), exist_ok=True)
     lines = [
@@ -33,7 +33,6 @@ def write_config(config_file: str, install_dir: str, values: dict) -> None:
         f'export ASK_CLAUDE_PROVIDER="{values["provider"]}"',
         f'export ASK_CLAUDE_MODEL="{values["model"]}"',
         f'export ASK_CLAUDE_OUTPUT="{values["output"]}"',
-        f'export PATH="{install_dir}:$PATH"',
     ]
     if values["provider"] == "anthropic":
         lines.append(f'export ASK_CLAUDE_API_KEY="{values["api_key"]}"')
@@ -49,7 +48,6 @@ def write_config(config_file: str, install_dir: str, values: dict) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Configure askclaude interactively.")
     parser.add_argument("--config-file", default=os.path.expanduser("~/.config/askclaude/config"))
-    parser.add_argument("--install-dir", default=os.path.expanduser("~/.local/share/askclaude"))
     args = parser.parse_args()
 
     import questionary
@@ -175,7 +173,6 @@ def main() -> None:
     # Write config
     write_config(
         args.config_file,
-        args.install_dir,
         {
             "provider": provider,
             "api_key": api_key,
