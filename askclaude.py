@@ -3,7 +3,7 @@
 # dependencies = ["anthropic[bedrock]", "rich"]
 # ///
 
-"""ask-claude: Query Claude from your terminal."""
+"""askclaude: Query Claude from your terminal."""
 
 import argparse
 import os
@@ -13,12 +13,25 @@ from typing import Iterator, Optional
 
 VALID_MODES = ("plain", "stream", "stream+markdown")
 
+MODEL_TIERS = {
+    "anthropic": {
+        "opus":   "claude-opus-4-6",
+        "sonnet": "claude-sonnet-4-6",
+        "haiku":  "claude-haiku-4-5-20251001",
+    },
+    "bedrock": {
+        "opus":   "us.anthropic.claude-opus-4-6-v1",
+        "sonnet": "us.anthropic.claude-sonnet-4-6",
+        "haiku":  "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    },
+}
+
 
 def load_config() -> dict:
-    provider = os.environ.get("ASK_CLAUDE_PROVIDER", "direct")
-    if provider not in ("direct", "bedrock"):
+    provider = os.environ.get("ASK_CLAUDE_PROVIDER", "anthropic")
+    if provider not in ("anthropic", "bedrock"):
         print(
-            "Error: ASK_CLAUDE_PROVIDER must be 'direct' or 'bedrock'.",
+            "Error: ASK_CLAUDE_PROVIDER must be 'anthropic' or 'bedrock'.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -26,11 +39,11 @@ def load_config() -> dict:
     api_key = None
     bedrock_api_key = None
 
-    if provider == "direct":
+    if provider == "anthropic":
         api_key = os.environ.get("ASK_CLAUDE_API_KEY")
         if not api_key:
             print(
-                "Error: ASK_CLAUDE_API_KEY is not set. Run install.sh or set it manually.",
+                "Error: ASK_CLAUDE_API_KEY is not set. Run install.sh or setup.py to configure.",
                 file=sys.stderr,
             )
             sys.exit(1)
@@ -38,14 +51,11 @@ def load_config() -> dict:
         bedrock_api_key = os.environ.get("ASK_CLAUDE_BEDROCK_API_KEY")
         if not bedrock_api_key:
             print(
-                "Error: ASK_CLAUDE_BEDROCK_API_KEY is not set. Run install.sh or set it manually.",
+                "Error: ASK_CLAUDE_BEDROCK_API_KEY is not set. Run install.sh or setup.py to configure.",
                 file=sys.stderr,
             )
             sys.exit(1)
 
-    default_model = (
-        "claude-sonnet-4-6" if provider == "direct" else "us.anthropic.claude-sonnet-4-6"
-    )
     aws_region = (
         os.environ.get("ASK_CLAUDE_AWS_REGION")
         or os.environ.get("AWS_REGION")
@@ -53,11 +63,14 @@ def load_config() -> dict:
         or "us-west-2"
     )
 
+    raw_model = os.environ.get("ASK_CLAUDE_MODEL", "sonnet")
+    model = MODEL_TIERS.get(provider, {}).get(raw_model, raw_model)
+
     return {
         "provider": provider,
         "api_key": api_key,
         "bedrock_api_key": bedrock_api_key,
-        "model": os.environ.get("ASK_CLAUDE_MODEL", default_model),
+        "model": model,
         "system": os.environ.get("ASK_CLAUDE_SYSTEM") or None,
         "max_tokens": int(os.environ.get("ASK_CLAUDE_MAX_TOKENS", "8096")),
         "output": os.environ.get("ASK_CLAUDE_OUTPUT", "stream+markdown"),
@@ -67,7 +80,7 @@ def load_config() -> dict:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        prog="ask-claude",
+        prog="askclaude",
         description="Query Claude from your terminal.",
     )
     parser.add_argument(
@@ -93,7 +106,7 @@ def build_client(config: dict):
     """Construct the appropriate Anthropic client based on provider."""
     import anthropic
 
-    if config["provider"] == "direct":
+    if config["provider"] == "anthropic":
         return anthropic.Anthropic(api_key=config["api_key"])
     else:
         os.environ["AWS_BEARER_TOKEN_BEDROCK"] = config["bedrock_api_key"]
