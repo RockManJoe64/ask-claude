@@ -72,7 +72,9 @@ fi
 
 # --- interactive config via setup.py ---
 echo ""
-uv run "$INSTALL_DIR/setup.py" --config-file "$CONFIG_FILE" --install-dir "$INSTALL_DIR"
+uv run "$INSTALL_DIR/setup.py" --config-file "$CONFIG_FILE"
+# Append PATH export using bash's POSIX-formatted path (avoids Windows path translation issues)
+echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$CONFIG_FILE"
 
 # --- make executable + remove stale bin entry ---
 chmod +x "$INSTALL_DIR/askclaude"
