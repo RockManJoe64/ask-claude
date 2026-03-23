@@ -58,6 +58,12 @@ for rc in "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.config/fish/config.fish"; do
     grep -v 'ask-claude' "$rc" > "$_tmp" && mv "$_tmp" "$rc"
     info "Removed old ask-claude entries from $rc"
   fi
+  # Clean up stale noglob alias that was previously written to rc files
+  if [ -f "$rc" ] && grep -q "noglob askclaude" "$rc" 2>/dev/null; then
+    _tmp="$(mktemp)"
+    grep -v 'noglob askclaude' "$rc" > "$_tmp" && mv "$_tmp" "$rc"
+    info "Removed stale noglob alias from $rc"
+  fi
 done
 
 # --- clone or pull ---
@@ -77,6 +83,8 @@ echo ""
 uv run "$INSTALL_DIR/setup.py" --config-file "$CONFIG_FILE"
 # Append PATH export using bash's POSIX-formatted path (avoids Windows path translation issues)
 echo "export PATH=\"$INSTALL_DIR:\$PATH\"" >> "$CONFIG_FILE"
+# zsh: prevent glob expansion on natural-language arguments (?, *, etc.)
+echo '[ -n "$ZSH_VERSION" ] && alias askclaude='\''noglob askclaude'\''' >> "$CONFIG_FILE"
 
 # --- make executable + remove stale bin entry ---
 chmod +x "$INSTALL_DIR/askclaude"
@@ -100,24 +108,10 @@ detect_rc() {
 RC_FILE="$(detect_rc)"
 if [ -f "$RC_FILE" ] && grep -qF "$CONFIG_FILE" "$RC_FILE" 2>/dev/null; then
   info "Shell rc already configured ($RC_FILE). Skipping."
-  # Ensure noglob alias is present for existing zsh installs
-  case "${SHELL:-}" in
-    */zsh)
-      if ! grep -q "noglob askclaude" "$RC_FILE" 2>/dev/null; then
-        echo "alias askclaude='noglob askclaude'" >> "$RC_FILE"
-        ok "Added noglob alias to $RC_FILE"
-      fi
-      ;;
-  esac
 else
   echo "" >> "$RC_FILE"
   echo "# askclaude" >> "$RC_FILE"
   echo "$SOURCE_LINE" >> "$RC_FILE"
-  case "${SHELL:-}" in
-    */zsh)
-      echo "alias askclaude='noglob askclaude'" >> "$RC_FILE"
-      ;;
-  esac
   ok "Added source line to $RC_FILE"
 fi
 
