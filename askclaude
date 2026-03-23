@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 [ -f "$HOME/.config/askclaude/config" ] && source "$HOME/.config/askclaude/config"
-uv run "$(dirname "$(realpath "$0")")/askclaude.py" "$@"
+# Resolve symlinks portably (realpath is GNU-only, not available on macOS without coreutils)
+_script="$0"
+while [ -L "$_script" ]; do
+  _script="$(cd "$(dirname "$_script")" && pwd -P)/$(readlink "$_script")"
+done
+uv run "$(cd "$(dirname "$_script")" && pwd -P)/askclaude.py" "$@"
